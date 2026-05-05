@@ -639,7 +639,7 @@ function processImage(file) {
     img.onload = function() {
       // Compress
       const canvas = document.createElement('canvas');
-      const MAX = 500;
+      const MAX = 300;
       let w = img.width, h = img.height;
       if (w > MAX || h > MAX) {
         if (w > h) { h = Math.round(h * MAX / w); w = MAX; }
@@ -647,9 +647,10 @@ function processImage(file) {
       }
       canvas.width = w; canvas.height = h;
       canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-      const base64 = canvas.toDataURL('image/jpeg', 0.55).split(',')[1];
-      showPreview(ev.target.result);
-      uploadToDrive(base64, file.name || 'item.jpg');
+      const base64 = canvas.toDataURL('image/jpeg', 0.4).split(',')[1];
+      const dataUrl = 'data:image/jpeg;base64,' + base64;
+      showPreview(dataUrl);
+      storeImageLocally(dataUrl);
     };
     img.src = ev.target.result;
   };
@@ -668,60 +669,13 @@ function showPreview(src) {
   clearBtn.classList.add('visible');
 }
 
-function uploadToDrive(base64, originalName) {
-  const fileName = 'item_' + Date.now() + '.jpg';
-  imgFileId = fileName;
-  document.getElementById('img-file-id').value = fileName;
-
-  // Mostrar indicador
-  const uploading = document.getElementById('img-uploading');
-  uploading.classList.add('visible');
-
-  // Intentar subir con fetch (puede fallar por CORB desde file://)
-  const formData = new URLSearchParams();
-  formData.append('action', 'uploadImage');
-  formData.append('imageData', base64);
-  formData.append('mimeType', 'image/jpeg');
-  formData.append('fileName', fileName);
-  formData.append('callback', '__noop');
-
-  const script = document.createElement('script');
-  const cbName = '__img_up_' + Date.now();
-  window[cbName] = function(resp) {
-    delete window[cbName];
-    script.remove();
-    uploading.classList.remove('visible');
-    // Si la respuesta vuelve con fileId, usarlo; si no, mantener fileName
-    if (resp && resp.fileId) {
-      imgFileId = resp.fileId;
-      document.getElementById('img-file-id').value = resp.fileId;
-    }
-    const idEl = document.getElementById('img-id');
-    idEl.textContent = '✓ Imagen lista';
-    idEl.classList.add('visible');
-  };
-  script.onerror = function() {
-    delete window[cbName];
-    uploading.classList.remove('visible');
-    // Aunque CORB bloquee la respuesta, la imagen igual se subió
-    // Guardamos el fileName como referencia
-    const idEl = document.getElementById('img-id');
-    idEl.textContent = '✓ Imagen lista (referencia: ' + fileName + ')';
-    idEl.classList.add('visible');
-  };
-  script.src = SHEETS_URL + '?action=uploadImage&imageData=' + encodeURIComponent(base64) +
-    '&mimeType=image/jpeg&fileName=' + encodeURIComponent(fileName) + '&callback=' + cbName;
-  document.head.appendChild(script);
-
-  // Timeout: si en 8 segundos no responde, asumir que se subió igual
-  setTimeout(function() {
-    if (document.getElementById('img-uploading').classList.contains('visible')) {
-      uploading.classList.remove('visible');
-      const idEl = document.getElementById('img-id');
-      idEl.textContent = '✓ Imagen lista (referencia: ' + fileName + ')';
-      idEl.classList.add('visible');
-    }
-  }, 8000);
+function storeImageLocally(dataUrl) {
+  imgFileId = dataUrl;
+  document.getElementById('img-file-id').value = dataUrl;
+  document.getElementById('img-uploading').classList.remove('visible');
+  const idEl = document.getElementById('img-id');
+  idEl.textContent = '✓ Imagen lista';
+  idEl.classList.add('visible');
 }
 
 function clearImage(e) {
