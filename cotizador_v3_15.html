@@ -442,8 +442,8 @@ td.img-cell { width: 60px; padding: 4px 8px; text-align: center; vertical-align:
 #pi-items-table td { border:1px solid #ccc; padding:3px 5px; vertical-align:middle; }
 #pi-items-table tbody tr:nth-child(even) td { background:#f8fafc; }
 #pi-items-table tbody tr.pi-item-row { position:relative; }
-#pi-items-table tbody tr .pi-row-actions { display:none; position:absolute; right:2px; top:50%; transform:translateY(-50%); z-index:10; gap:3px; }
-#pi-items-table tbody tr:hover .pi-row-actions { display:flex; }
+#pi-items-table tbody tr .pi-row-actions { display:flex; gap:3px; margin-top:2px; }
+@media print { .pi-row-actions, .no-print-hide { display:none !important; } }
 .pi-row-btn { padding:2px 6px; font-size:10px; border-radius:4px; cursor:pointer; border:1px solid; white-space:nowrap; background:white; }
 .pi-row-btn.dup { color:#1d6fb8; border-color:#1d6fb8; }
 .pi-row-btn.del { color:#ef4444; border-color:#ef4444; }
@@ -1824,14 +1824,15 @@ function openProformaModal(entity) {
       return '<option value="'+q+'" '+(q===defQty?'selected':'')+'>'+qtyLabel(parseInt(q))+'</option>';
     }).join('');
 
-    return '<tr class="pi-item-row" data-item-idx="'+i+'" style="position:relative">' +
-      '<td class="pi-it" style="position:relative">'+(i+1<10?'0'+(i+1):''+(i+1))+
-        '<span class="pi-row-actions no-print">' +
+    return '<tr class="pi-item-row" data-item-idx="'+i+'">' +
+      '<td class="pi-it">'+(i+1<10?'0'+(i+1):''+(i+1))+'</td>' +
+      '<td class="pi-img no-print-hide" style="text-align:center">' +
+        (item.img ? '<img src="'+item.img+'" alt=""><br>' : '') +
+        '<span class="pi-row-actions" style="display:flex;justify-content:center;gap:2px;margin-top:2px">' +
           '<button class="pi-row-btn dup" onclick="piDupRow(this)" title="Duplicar">⊕</button>' +
           '<button class="pi-row-btn del" onclick="piDelRow(this)" title="Eliminar">✕</button>' +
         '</span>' +
       '</td>' +
-      '<td class="pi-img">'+(item.img ? '<img src="'+item.img+'" alt="">' : '')+'</td>' +
       '<td class="pi-qty">' + '<select class="pi-qty-sel" data-item="'+i+'" onchange="piRecalcRow('+i+')" style="font-size:10px;border:1px solid #ccc;border-radius:3px;padding:1px 3px;margin-bottom:3px;display:block;width:100%">'+qtyOpts+'</select>' + '<input type="text" class="pi-qty-input" data-item="'+i+'" value="'+defQty+'" oninput="piRecalcRowFromQty('+i+')" style="width:100%;font-size:10px;font-family:Inter,sans-serif;border:1px solid #ddd;border-radius:3px;padding:1px 4px;text-align:center;outline:none" placeholder="qty">' + '</td>' +
       '<td class="pi-desc"><span contenteditable="true" class="pi-editable">'+desc+'</span></td>' +
       '<td class="pi-up"><span contenteditable="true" class="pi-editable pi-price-cell" data-item="'+i+'" oninput="piRecalcRowFromPrice('+i+')">$'+defPrice+'</span></td>' +
@@ -2132,7 +2133,7 @@ function piAddManualRow() {
   // append remove button (hidden in print)
   var tdDel = document.createElement('td');
   tdDel.style.cssText = 'border:none;padding:2px 4px;position:relative;';
-  tdDel.className = 'no-print';
+  tdDel.className = 'no-print-hide';
   tdDel.innerHTML = '<span class="pi-row-actions" style="display:flex;gap:3px;">' +
     '<button class="pi-row-btn dup" onclick="piDupRow(this)" title="Duplicar">⊕</button>' +
     '<button class="pi-row-btn del" onclick="piDelRow(this)" title="Eliminar">✕</button>' +
@@ -2141,21 +2142,36 @@ function piAddManualRow() {
   tbody.appendChild(tr);
 }
 
-function piDelRow(btn) {
-  var tr = btn.closest('tr');
-  if (tr) { tr.remove(); piRecalcSubtotal(); }
-}
-
 function piDupRow(btn) {
   var tr = btn.closest('tr');
   if (!tr) return;
   var clone = tr.cloneNode(true);
-  // Make inputs in clone functional
-  clone.querySelectorAll('input').forEach(function(inp) {
-    inp.value = inp.value;
-  });
+  clone.querySelectorAll('input').forEach(function(inp) { inp.value = inp.value; });
   tr.parentNode.insertBefore(clone, tr.nextSibling);
+  // Renumber all rows sequentially
+  piRenumberRows();
   piRecalcSubtotal();
+}
+
+function piDelRow(btn) {
+  var tr = btn.closest('tr');
+  if (tr) { tr.remove(); piRenumberRows(); piRecalcSubtotal(); }
+}
+
+function piRenumberRows() {
+  var tbody = document.getElementById('pi-tbody');
+  if (!tbody) return;
+  var rows = tbody.querySelectorAll('tr.pi-item-row, tr.pi-manual-row');
+  rows.forEach(function(tr, idx) {
+    var numStr = (idx + 1) < 10 ? '0' + (idx + 1) : '' + (idx + 1);
+    var itCell = tr.querySelector('.pi-it');
+    if (itCell) {
+      // Keep buttons, just update the text node
+      var actions = itCell.querySelector('.pi-row-actions');
+      itCell.textContent = numStr;
+      if (actions) itCell.appendChild(actions);
+    }
+  });
 }
 
 function piRecalcManualRow(idx) {
