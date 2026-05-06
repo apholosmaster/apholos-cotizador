@@ -670,11 +670,28 @@ function showPreview(src) {
 }
 
 function storeImageLocally(dataUrl) {
+  // Calculate size in KB
+  const base64 = dataUrl.split(',')[1] || dataUrl;
+  const sizeKB = Math.round((base64.length * 3) / 4 / 1024);
+  const MAX_KB = 60;
+
+  const idEl = document.getElementById('img-id');
+  document.getElementById('img-uploading').classList.remove('visible');
+
+  if (sizeKB > MAX_KB) {
+    // Too large - warn and block
+    imgFileId = '';
+    document.getElementById('img-file-id').value = '';
+    idEl.textContent = '⚠️ Imagen muy grande (' + sizeKB + ' KB). Máximo recomendado: ' + MAX_KB + ' KB. Reduì el tamaño o usá otra imagen.';
+    idEl.style.color = '#ef4444';
+    idEl.classList.add('visible');
+    return;
+  }
+
   imgFileId = dataUrl;
   document.getElementById('img-file-id').value = dataUrl;
-  document.getElementById('img-uploading').classList.remove('visible');
-  const idEl = document.getElementById('img-id');
-  idEl.textContent = '✓ Imagen lista';
+  idEl.textContent = '✓ Imagen lista — ' + sizeKB + ' KB';
+  idEl.style.color = '#16a34a';
   idEl.classList.add('visible');
 }
 
