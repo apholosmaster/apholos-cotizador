@@ -1535,9 +1535,11 @@ function updatePrices(i, item) {
         return '<option value="'+o+'"'+(saved.inco===o?' selected':'')+'>'+( o||'— incoterm —')+'</option>';
       }).join('');
       rows.push(
-        '<div style="padding:2px 0;border-bottom:1px solid #e2e8f0;white-space:nowrap">' +
-          '<span style="color:#64748b;font-size:10px;margin-right:8px">' + qtyLabel(q) + ' u.</span>' +
-          '<span style="font-weight:600;color:#1a2535;font-size:9px">USD ' + parseFloat(price).toFixed(2) + '</span>' +
+        '<div style="padding:2px 0;border-bottom:1px solid #e2e8f0;white-space:nowrap;display:flex;align-items:center;gap:4px">' +
+          '<span contenteditable="true" class="editable-cell" style="color:#64748b;font-size:10px;min-width:40px">' + qtyLabel(q) + '</span>' +
+          '<span style="color:#64748b;font-size:10px">u.</span>' +
+          '<span style="font-weight:600;color:#1a2535;font-size:9px">USD </span>' +
+          '<span contenteditable="true" class="editable-cell" style="font-weight:600;color:#1a2535;font-size:9px;min-width:40px">' + parseFloat(price).toFixed(2) + '</span>' +
         '</div>' +
         '<div class="ship-row no-print-hide" data-qty="'+q+'" style="display:flex;align-items:center;gap:4px;padding:2px 0 4px 0;border-bottom:1px dashed #e2e8f0">' +
           '<span style="font-size:9px;color:#94a3b8;white-space:nowrap">🚢 ship:</span>' +
