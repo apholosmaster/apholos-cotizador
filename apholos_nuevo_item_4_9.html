@@ -1,0 +1,837 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Apholos — Nuevo Ítem</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f4f3f0;
+    --surface: #ffffff;
+    --surface2: #f9f8f6;
+    --border: #e2e0db;
+    --border-focus: #1a2535;
+    --text: #1a2535;
+    --text-muted: #8a8880;
+    --accent: #1a2535;
+    --accent2: #c8873a;
+    --success: #2d7a4f;
+    --error: #c0392b;
+    --radius: 8px;
+    --shadow: 0 2px 12px rgba(26,37,53,.07);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    font-size: 14px;
+  }
+
+  /* Header */
+  .header {
+    background: var(--accent);
+    color: white;
+    padding: 18px 32px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    box-shadow: 0 2px 16px rgba(0,0,0,.2);
+  }
+  .header-logo {
+    font-size: 18px;
+    font-weight: 600;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+  }
+  .header-sep { width: 1px; height: 20px; background: rgba(255,255,255,.2); }
+  .header-title { font-size: 13px; color: rgba(255,255,255,.6); font-weight: 400; letter-spacing: .04em; }
+
+  /* Layout */
+  .container {
+    max-width: 920px;
+    margin: 0 auto;
+    padding: 32px 24px 80px;
+  }
+
+  /* Section cards */
+  .section {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 24px 28px;
+    margin-bottom: 20px;
+    box-shadow: var(--shadow);
+  }
+  .section-title {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: .1em;
+    color: var(--text-muted);
+    margin-bottom: 20px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .section-title::before {
+    content: '';
+    width: 3px;
+    height: 14px;
+    background: var(--accent2);
+    border-radius: 2px;
+  }
+
+  /* Grid */
+  .grid { display: grid; gap: 16px; }
+  .grid-2 { grid-template-columns: 1fr 1fr; }
+  .grid-3 { grid-template-columns: 1fr 1fr 1fr; }
+  .grid-4 { grid-template-columns: 1fr 1fr 1fr 1fr; }
+  .span-2 { grid-column: span 2; }
+  .span-3 { grid-column: span 3; }
+  .span-4 { grid-column: span 4; }
+
+  /* Fields */
+  .field { display: flex; flex-direction: column; gap: 5px; }
+  .field label {
+    font-size: 11px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: .06em;
+    color: var(--text-muted);
+  }
+  .field label .req { color: var(--accent2); margin-left: 2px; }
+  input, select, textarea {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    color: var(--text);
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 9px 12px;
+    outline: none;
+    transition: border-color .15s, box-shadow .15s;
+    width: 100%;
+  }
+  input:focus, select:focus, textarea:focus {
+    border-color: var(--border-focus);
+    box-shadow: 0 0 0 3px rgba(26,37,53,.08);
+    background: white;
+  }
+  textarea { resize: vertical; min-height: 72px; line-height: 1.5; }
+  select { cursor: pointer; }
+
+  /* Price rows */
+  .price-row {
+    display: grid;
+    grid-template-columns: 120px 140px 36px;
+    gap: 8px;
+    align-items: end;
+  }
+  .price-row .field label { white-space: nowrap; }
+  .price-remove {
+    width: 32px; height: 32px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: white;
+    cursor: pointer;
+    color: var(--text-muted);
+    font-size: 16px;
+    display: flex; align-items: center; justify-content: center;
+    transition: all .15s;
+    margin-bottom: 1px;
+  }
+  .price-remove:hover { background: #fee; border-color: #e88; color: var(--error); }
+  .add-price-btn {
+    background: none;
+    border: 1px dashed var(--border);
+    border-radius: 6px;
+    padding: 8px 14px;
+    font-size: 12px;
+    color: var(--text-muted);
+    cursor: pointer;
+    font-family: 'DM Sans', sans-serif;
+    transition: all .15s;
+    margin-top: 4px;
+  }
+  .add-price-btn:hover { border-color: var(--accent); color: var(--accent); background: var(--surface2); }
+
+  /* Image upload */
+  .img-zone {
+    border: 2px dashed var(--border);
+    border-radius: var(--radius);
+    padding: 32px 20px;
+    text-align: center;
+    cursor: pointer;
+    transition: all .2s;
+    background: var(--surface2);
+    position: relative;
+  }
+  .img-zone:hover, .img-zone.drag-over {
+    border-color: var(--accent2);
+    background: #fff8f2;
+  }
+  .img-zone.has-image { padding: 12px; border-style: solid; border-color: var(--accent2); }
+  .img-zone-icon { font-size: 32px; margin-bottom: 8px; opacity: .4; }
+  .img-zone-text { font-size: 13px; color: var(--text-muted); line-height: 1.5; }
+  .img-zone-text strong { color: var(--text); display: block; margin-bottom: 4px; }
+  .img-preview {
+    max-width: 100%;
+    max-height: 200px;
+    object-fit: contain;
+    border-radius: 4px;
+    display: none;
+  }
+  .img-preview.visible { display: block; margin: 0 auto; }
+  .img-clear {
+    position: absolute; top: 8px; right: 8px;
+    width: 24px; height: 24px;
+    border-radius: 50%;
+    background: rgba(0,0,0,.5);
+    color: white;
+    border: none;
+    cursor: pointer;
+    font-size: 13px;
+    display: none;
+    align-items: center; justify-content: center;
+  }
+  .img-clear.visible { display: flex; }
+  .img-uploading {
+    font-size: 12px;
+    color: var(--accent2);
+    margin-top: 8px;
+    display: none;
+  }
+  .img-uploading.visible { display: block; }
+  .img-id {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    color: var(--success);
+    margin-top: 6px;
+    display: none;
+    word-break: break-all;
+  }
+  .img-id.visible { display: block; }
+
+  /* Toggle activo */
+  .toggle-wrap {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 0;
+  }
+  .toggle {
+    width: 40px; height: 22px;
+    background: #ddd;
+    border-radius: 11px;
+    position: relative;
+    cursor: pointer;
+    transition: background .2s;
+    border: none;
+    flex-shrink: 0;
+  }
+  .toggle.on { background: var(--success); }
+  .toggle::after {
+    content: '';
+    width: 18px; height: 18px;
+    background: white;
+    border-radius: 50%;
+    position: absolute;
+    top: 2px; left: 2px;
+    transition: transform .2s;
+    box-shadow: 0 1px 4px rgba(0,0,0,.2);
+  }
+  .toggle.on::after { transform: translateX(18px); }
+  .toggle-label { font-size: 13px; font-weight: 500; }
+
+  /* Submit */
+  .submit-bar {
+    position: fixed;
+    bottom: 0; left: 0; right: 0;
+    background: white;
+    border-top: 1px solid var(--border);
+    padding: 14px 32px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    z-index: 100;
+    box-shadow: 0 -4px 20px rgba(0,0,0,.08);
+  }
+  .submit-status { font-size: 13px; color: var(--text-muted); }
+  .submit-status.error { color: var(--error); }
+  .submit-status.success { color: var(--success); font-weight: 500; }
+  .btn-submit {
+    background: var(--accent);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 11px 28px;
+    font-size: 14px;
+    font-weight: 600;
+    font-family: 'DM Sans', sans-serif;
+    cursor: pointer;
+    transition: all .15s;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .btn-submit:hover { background: #2a3d55; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(26,37,53,.3); }
+  .btn-submit:active { transform: translateY(0); }
+  .btn-submit:disabled { opacity: .5; cursor: not-allowed; transform: none; }
+  .btn-reset {
+    background: none;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 20px;
+    font-size: 13px;
+    font-family: 'DM Sans', sans-serif;
+    cursor: pointer;
+    color: var(--text-muted);
+    transition: all .15s;
+    margin-right: 12px;
+  }
+  .btn-reset:hover { border-color: var(--text-muted); color: var(--text); }
+
+  /* Toast */
+  .toast {
+    position: fixed;
+    top: 80px; right: 24px;
+    background: var(--success);
+    color: white;
+    padding: 14px 20px;
+    border-radius: var(--radius);
+    font-size: 14px;
+    font-weight: 500;
+    box-shadow: 0 8px 24px rgba(0,0,0,.15);
+    transform: translateX(120%);
+    transition: transform .3s cubic-bezier(.34,1.56,.64,1);
+    z-index: 999;
+    max-width: 320px;
+  }
+  .toast.show { transform: translateX(0); }
+  .toast.error { background: var(--error); }
+
+  @media (max-width: 640px) {
+    .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr; }
+    .span-2, .span-3, .span-4 { grid-column: span 1; }
+    .container { padding: 20px 16px 80px; }
+    .header { padding: 14px 20px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-logo">Apholos</div>
+  <div class="header-sep"></div>
+  <div class="header-title">Nuevo Ítem — Pricing Sheet</div>
+</div>
+
+<div class="container">
+
+  <!-- Identificación -->
+  <div class="section">
+    <div class="section-title">Identificación</div>
+    <div class="grid grid-2">
+      <div class="field">
+        <label>Tipo <span class="req">*</span></label>
+        <select id="tipo">
+          <option value="">— Seleccionar —</option>
+          <option>STOPPER</option>
+          <option>ETIQUETA</option>
+          <option>ACCESSORY</option>
+          <option>MUSELET</option>
+          <option>LOOP COVER</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Cliente <span class="req">*</span></label>
+        <input type="text" id="cliente" placeholder="Nombre del cliente">
+      </div>
+      <div class="field span-2">
+        <label>Descripción <span class="req">*</span></label>
+        <textarea id="desc" placeholder="Descripción completa del producto" rows="2"></textarea>
+      </div>
+      <div class="field">
+        <label>Código</label>
+        <input type="text" id="codigo" placeholder="Ej: 71395">
+      </div>
+      <div class="field">
+        <label>Design No.</label>
+        <input type="text" id="design_no" placeholder="Ej: 71395">
+      </div>
+      <div class="field">
+        <label># Cuño</label>
+        <input type="text" id="cuno" placeholder="Ej: 12345">
+      </div>
+    </div>
+  </div>
+
+  <!-- Especificaciones -->
+  <div class="section">
+    <div class="section-title">Especificaciones</div>
+    <div class="grid grid-3">
+      <div class="field">
+        <label>Material</label>
+        <select id="material">
+          <option value="">— Seleccionar —</option>
+          <option>Zamac / Metal</option>
+          <option>Aluminum</option>
+          <option>Brass / Copper</option>
+          <option>Crystal / Glass</option>
+          <option>Iron</option>
+          <option>Steel</option>
+          <option>Wood</option>
+          <option>Wood + Metal</option>
+          <option>Wood + Synthetic</option>
+          <option>Plastic (ABS/PETG)</option>
+          <option>Synthetic Leather + Metal Snap</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Mat. Raw</label>
+        <input type="text" id="mat_raw" placeholder="Ej: Zamac / Brass">
+      </div>
+      <div class="field">
+        <label>Medida</label>
+        <input type="text" id="medida" placeholder="Ej: Ø33x5mm">
+      </div>
+      <div class="field">
+        <label>Color</label>
+        <input type="text" id="color" placeholder="Ej: Satin Brushed Nickel">
+      </div>
+      <div class="field">
+        <label>Tipo de Corcho</label>
+        <select id="cork">
+          <option value="—">—</option>
+          <option>Natural</option>
+          <option>Synthetic</option>
+          <option>Micro-agglomerated</option>
+          <option>GPI 28/400</option>
+          <option>GPI 33/400</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Origen</label>
+        <select id="origen">
+          <option value="">— Seleccionar —</option>
+          <option>BUENOS AIRES</option>
+          <option>DONGGUAN</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <!-- Comercial -->
+  <div class="section">
+    <div class="section-title">Comercial</div>
+    <div class="grid grid-3">
+      <div class="field">
+        <label>Agente</label>
+        <select id="agente">
+          <option value="">— Seleccionar —</option>
+          <option value="Enoservin|E1ID">Enoservin (Bruno Orueta)</option>
+          <option value="Dagaprint|86">Dagaprint</option>
+          <option value="Luciana V.|VE">Luciana V.</option>
+          <option value="Decavi|E2ID">Decavi</option>
+          <option value="Mino Russo|61-1">Mino Russo</option>
+          <option value="Sebastian Diaz|">Sebastian Diaz</option>
+          <option value="Stefano Dell'Orto|88">Stefano Dell'Orto</option>
+          <option value="Sumi Gouss|74">Sumi Gouss</option>
+          <option value="AlexSchab|LAT">AlexSchab</option>
+          <option value="Paty Fonseca|MX01">Paty Fonseca</option>
+          <option value="Diego Gneri|VU">Diego Gneri</option>
+          <option value="Randy Chapin|64">Randy Chapin</option>
+          <option value="Rui Bastos|49">Rui Bastos</option>
+          <option value="Shawn Chapman|77">Shawn Chapman</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Fecha</label>
+        <input type="text" id="fecha" placeholder="Ej: 12-05-25">
+      </div>
+      <div class="field">
+        <label>Leadtime</label>
+        <input type="text" id="leadtime" placeholder="Ej: 10-12 weeks">
+      </div>
+    </div>
+  </div>
+
+  <!-- Precios -->
+  <div class="section">
+    <div class="section-title">Precios (hasta 4 niveles de cantidad)</div>
+    <div id="prices-container" style="display:flex;flex-direction:column;gap:10px">
+      <div class="price-row" data-price="1">
+        <div class="field">
+          <label>Qty 1</label>
+          <input type="number" id="p1qty" placeholder="Ej: 5000">
+        </div>
+        <div class="field">
+          <label>USD / unidad</label>
+          <input type="number" step="0.001" id="p1val" placeholder="Ej: 1.250">
+        </div>
+        <div></div>
+      </div>
+      <div class="price-row" data-price="2" style="display:none">
+        <div class="field">
+          <label>Qty 2</label>
+          <input type="number" id="p2qty" placeholder="Ej: 10000">
+        </div>
+        <div class="field">
+          <label>USD / unidad</label>
+          <input type="number" step="0.001" id="p2val" placeholder="Ej: 1.100">
+        </div>
+        <button class="price-remove" onclick="removePrice(2)">×</button>
+      </div>
+      <div class="price-row" data-price="3" style="display:none">
+        <div class="field">
+          <label>Qty 3</label>
+          <input type="number" id="p3qty" placeholder="Ej: 25000">
+        </div>
+        <div class="field">
+          <label>USD / unidad</label>
+          <input type="number" step="0.001" id="p3val" placeholder="Ej: 0.980">
+        </div>
+        <button class="price-remove" onclick="removePrice(3)">×</button>
+      </div>
+      <div class="price-row" data-price="4" style="display:none">
+        <div class="field">
+          <label>Qty 4</label>
+          <input type="number" id="p4qty" placeholder="Ej: 50000">
+        </div>
+        <div class="field">
+          <label>USD / unidad</label>
+          <input type="number" step="0.001" id="p4val" placeholder="Ej: 0.850">
+        </div>
+        <button class="price-remove" onclick="removePrice(4)">×</button>
+      </div>
+    </div>
+    <button class="add-price-btn" id="add-price-btn" onclick="addPrice()">+ Agregar nivel de precio</button>
+
+    <!-- Precio de Molde -->
+    <div style="margin-top:20px;padding-top:16px;border-top:1px solid var(--border)">
+      <div class="section-title" style="margin-bottom:14px;padding-bottom:0;border-bottom:none">Molde</div>
+      <div class="grid grid-2" style="max-width:360px">
+        <div class="field">
+          <label>Precio de Molde (USD)</label>
+          <input type="number" step="0.01" id="molde_usd" placeholder="Ej: 850.00">
+        </div>
+        <div class="field">
+          <label>Notas de Molde</label>
+          <input type="text" id="molde_notas" placeholder="Ej: Incluido / A cargo del cliente">
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Imagen -->
+  <div class="section">
+    <div class="section-title">Imagen del Producto</div>
+    <div class="img-zone" id="img-zone"
+         ondragover="handleDragOver(event)"
+         ondragleave="handleDragLeave(event)"
+         ondrop="handleDrop(event)"
+         onclick="imgZoneClick()">
+      <button class="img-clear" id="img-clear" onclick="clearImage(event)">×</button>
+      <div id="img-placeholder">
+        <div class="img-zone-icon">🖼️</div>
+        <div class="img-zone-text">
+          <strong>Pegá o soltá una imagen aquí</strong>
+          Ctrl+V desde el portapapeles · Drag & Drop<br>
+          <span style="font-size:11px;opacity:.7">Se comprimirá automáticamente antes de subir</span>
+        </div>
+      </div>
+      <img id="img-preview" class="img-preview" alt="Preview">
+      <div class="img-uploading" id="img-uploading">⏳ Subiendo imagen a Drive…</div>
+      <div class="img-id" id="img-id"></div>
+    </div>
+    <input type="hidden" id="img-file-id" value="">
+  </div>
+
+  <!-- Estado -->
+  <div class="section">
+    <div class="section-title">Estado</div>
+    <div class="toggle-wrap">
+      <button class="toggle on" id="activo-toggle" onclick="toggleActivo()"></button>
+      <span class="toggle-label" id="activo-label">Activo en el cotizador (SI)</span>
+    </div>
+  </div>
+
+</div>
+
+<!-- Submit bar -->
+<div class="submit-bar">
+  <div class="submit-status" id="submit-status"></div>
+  <div style="display:flex;align-items:center">
+    <button class="btn-reset" onclick="resetForm()">Limpiar</button>
+    <button class="btn-submit" id="btn-submit" onclick="submitForm()">
+      <span>✓</span> Guardar en Pricing Sheet
+    </button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const SHEETS_URL = 'https://script.google.com/macros/s/AKfycbw79LFbF5JYw18sEMvhS2zXj8PfWjZIHUdaxrvmBRTF2O1W9LQKTXq7vAJ1GwmYAwvW/exec';
+
+let activoVal = 'SI';
+let imgFileId = '';
+let pricesShown = 1;
+
+// ── Activo toggle ──
+function toggleActivo() {
+  const btn = document.getElementById('activo-toggle');
+  const lbl = document.getElementById('activo-label');
+  activoVal = activoVal === 'SI' ? 'NO' : 'SI';
+  btn.classList.toggle('on', activoVal === 'SI');
+  lbl.textContent = activoVal === 'SI' ? 'Activo en el cotizador (SI)' : 'Inactivo — no aparece en el cotizador (NO)';
+}
+
+// ── Price levels ──
+function addPrice() {
+  if (pricesShown >= 4) return;
+  pricesShown++;
+  document.querySelector('[data-price="'+pricesShown+'"]').style.display = 'grid';
+  if (pricesShown >= 4) document.getElementById('add-price-btn').style.display = 'none';
+}
+function removePrice(n) {
+  document.querySelector('[data-price="'+n+'"]').style.display = 'none';
+  document.getElementById('p'+n+'qty').value = '';
+  document.getElementById('p'+n+'val').value = '';
+  pricesShown = n - 1;
+  document.getElementById('add-price-btn').style.display = 'block';
+}
+
+// ── Image handling ──
+document.addEventListener('paste', function(e) {
+  const items = e.clipboardData && e.clipboardData.items;
+  if (!items) return;
+  for (let i = 0; i < items.length; i++) {
+    if (items[i].type.indexOf('image') !== -1) {
+      const file = items[i].getAsFile();
+      processImage(file);
+      break;
+    }
+  }
+});
+
+function handleDragOver(e) {
+  e.preventDefault();
+  document.getElementById('img-zone').classList.add('drag-over');
+}
+function handleDragLeave(e) {
+  document.getElementById('img-zone').classList.remove('drag-over');
+}
+function handleDrop(e) {
+  e.preventDefault();
+  document.getElementById('img-zone').classList.remove('drag-over');
+  const file = e.dataTransfer.files[0];
+  if (file && file.type.indexOf('image') !== -1) processImage(file);
+}
+function imgZoneClick() {
+  if (imgFileId) return;
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = 'image/*';
+  input.onchange = function() { if (input.files[0]) processImage(input.files[0]); };
+  input.click();
+}
+
+function processImage(file) {
+  const reader = new FileReader();
+  reader.onload = function(ev) {
+    const img = new Image();
+    img.onload = function() {
+      // Compress
+      const canvas = document.createElement('canvas');
+      const MAX = 150;
+      let w = img.width, h = img.height;
+      if (w > MAX || h > MAX) {
+        if (w > h) { h = Math.round(h * MAX / w); w = MAX; }
+        else { w = Math.round(w * MAX / h); h = MAX; }
+      }
+      canvas.width = w; canvas.height = h;
+      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+      const base64 = canvas.toDataURL('image/jpeg', 0.3).split(',')[1];
+      const dataUrl = 'data:image/jpeg;base64,' + base64;
+      showPreview(dataUrl);
+      storeImageLocally(dataUrl);
+    };
+    img.src = ev.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+function showPreview(src) {
+  const zone = document.getElementById('img-zone');
+  const preview = document.getElementById('img-preview');
+  const placeholder = document.getElementById('img-placeholder');
+  const clearBtn = document.getElementById('img-clear');
+  zone.classList.add('has-image');
+  placeholder.style.display = 'none';
+  preview.src = src;
+  preview.classList.add('visible');
+  clearBtn.classList.add('visible');
+}
+
+function storeImageLocally(dataUrl) {
+  // Calculate size in KB
+  const base64 = dataUrl.split(',')[1] || dataUrl;
+  const sizeKB = Math.round((base64.length * 3) / 4 / 1024);
+  const MAX_KB = 60;
+
+  const idEl = document.getElementById('img-id');
+  document.getElementById('img-uploading').classList.remove('visible');
+
+  if (sizeKB > MAX_KB) {
+    // Too large - warn and block
+    imgFileId = '';
+    document.getElementById('img-file-id').value = '';
+    idEl.textContent = '⚠️ Imagen muy grande (' + sizeKB + ' KB). Máximo recomendado: ' + MAX_KB + ' KB. Reduì el tamaño o usá otra imagen.';
+    idEl.style.color = '#ef4444';
+    idEl.classList.add('visible');
+    return;
+  }
+
+  imgFileId = dataUrl;
+  document.getElementById('img-file-id').value = dataUrl;
+  idEl.textContent = '✓ Imagen lista — ' + sizeKB + ' KB';
+  idEl.style.color = '#16a34a';
+  idEl.classList.add('visible');
+}
+
+function clearImage(e) {
+  e.stopPropagation();
+  imgFileId = '';
+  document.getElementById('img-file-id').value = '';
+  document.getElementById('img-preview').classList.remove('visible');
+  document.getElementById('img-preview').src = '';
+  document.getElementById('img-placeholder').style.display = '';
+  document.getElementById('img-zone').classList.remove('has-image');
+  document.getElementById('img-clear').classList.remove('visible');
+  document.getElementById('img-id').classList.remove('visible');
+  document.getElementById('img-uploading').classList.remove('visible');
+}
+
+// ── Submit ──
+function submitForm() {
+  const tipo    = document.getElementById('tipo').value;
+  const cliente = document.getElementById('cliente').value.trim();
+  const desc    = document.getElementById('desc').value.trim();
+
+  if (!tipo || !cliente || !desc) {
+    setStatus('Completá los campos obligatorios: Tipo, Cliente y Descripción.', 'error');
+    return;
+  }
+
+  const btn = document.getElementById('btn-submit');
+  btn.disabled = true;
+  btn.textContent = '⏳ Guardando…';
+  setStatus('Enviando al sheet…', '');
+
+  const params = {
+    action:      'addItem',
+    tipo:        tipo,
+    cliente:     cliente,
+    desc:        desc,
+    medida:      document.getElementById('medida').value.trim(),
+    material:    document.getElementById('material').value,
+    mat_raw:     document.getElementById('mat_raw').value.trim(),
+    cork:        document.getElementById('cork').value,
+    color:       document.getElementById('color').value.trim(),
+    codigo:      document.getElementById('codigo').value.trim(),
+    origen:      document.getElementById('origen').value,
+    agente:      (document.getElementById('agente').value || '').split('|')[0],
+    fecha:       document.getElementById('fecha').value.trim(),
+    leadtime:    document.getElementById('leadtime').value.trim(),
+    p1qty:       document.getElementById('p1qty').value,
+    p1val:       document.getElementById('p1val').value,
+    p2qty:       document.getElementById('p2qty').value,
+    p2val:       document.getElementById('p2val').value,
+    p3qty:       document.getElementById('p3qty').value,
+    p3val:       document.getElementById('p3val').value,
+    p4qty:       document.getElementById('p4qty').value,
+    p4val:       document.getElementById('p4val').value,
+    molde_usd:   document.getElementById('molde_usd').value,
+    molde_notas: document.getElementById('molde_notas').value.trim(),
+    img:         imgFileId,
+    activo:      activoVal,
+    design_no:   document.getElementById('design_no').value.trim(),
+    cuno:        document.getElementById('cuno') ? document.getElementById('cuno').value.trim() : ''
+  };
+
+  const cbName = '__add_item_' + Date.now();
+  const script = document.createElement('script');
+  window[cbName] = function(resp) {
+    delete window[cbName];
+    script.remove();
+    btn.disabled = false;
+    btn.innerHTML = '<span>✓</span> Guardar en Pricing Sheet';
+    if (resp && resp.ok) {
+      setStatus('', '');
+      showToast('✓ Ítem guardado correctamente en el pricing sheet');
+      setTimeout(function() { if (confirm('¿Querés agregar otro ítem?')) resetForm(); }, 1800);
+    } else {
+      const errMsg = resp && resp.error ? resp.error : (resp ? JSON.stringify(resp) : 'sin respuesta del servidor');
+      setStatus('Error: ' + errMsg, 'error');
+      showToast('✗ ' + errMsg, true);
+      console.error('Respuesta del servidor:', resp);
+    }
+  };
+  script.onerror = function() {
+    btn.disabled = false;
+    btn.innerHTML = '<span>✓</span> Guardar en Pricing Sheet';
+    setStatus('Error de conexión con el servidor.', 'error');
+  };
+
+  let url = SHEETS_URL + '?callback=' + cbName;
+  Object.keys(params).forEach(function(k) {
+    url += '&' + k + '=' + encodeURIComponent(params[k]);
+  });
+  script.src = url;
+  document.head.appendChild(script);
+}
+
+function setStatus(msg, type) {
+  const el = document.getElementById('submit-status');
+  el.textContent = msg;
+  el.className = 'submit-status' + (type ? ' ' + type : '');
+}
+
+function showToast(msg, isError) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast' + (isError ? ' error' : '') + ' show';
+  setTimeout(function() { t.classList.remove('show'); }, 3500);
+}
+
+function resetForm() {
+  ['tipo','cliente','desc','medida','material','mat_raw','cork','color',
+   'codigo','origen','agente','fecha','leadtime','design_no',
+   'p1qty','p1val','p2qty','p2val','p3qty','p3val','p4qty','p4val',
+   'molde_usd','molde_notas','cuno'].forEach(function(id) {
+    const el = document.getElementById(id);
+    if (el) el.value = '';
+  });
+  clearImage({ stopPropagation: function(){} });
+  activoVal = 'SI';
+  document.getElementById('activo-toggle').classList.add('on');
+  document.getElementById('activo-label').textContent = 'Activo en el cotizador (SI)';
+  pricesShown = 1;
+  document.querySelector('[data-price="2"]').style.display = 'none';
+  document.querySelector('[data-price="3"]').style.display = 'none';
+  document.querySelector('[data-price="4"]').style.display = 'none';
+  document.getElementById('add-price-btn').style.display = 'block';
+  setStatus('', '');
+}
+</script>
+</body>
+</html>
