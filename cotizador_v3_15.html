@@ -1661,7 +1661,16 @@ function prepareAndPrint() {
       material: cells[3] ? (cells[3].querySelector('.editable-cell') ? cells[3].querySelector('.editable-cell').textContent : cells[3].textContent) : '',
       ncm:      cells[4] ? cells[4].querySelector('.editable-cell').textContent : '',
       color:    cells[5] ? (cells[5].querySelector('.editable-cell') ? cells[5].querySelector('.editable-cell').textContent : cells[5].textContent) : '',
-      design:   cells[6] ? cells[6].querySelector('.editable-cell').textContent : '',
+      design: cells[6] ? (function(c) {
+  var parts = [];
+  var spans = c.querySelectorAll('.editable-cell');
+  var labels = c.querySelectorAll('span[style*="color:#666"]');
+  labels.forEach(function(label, idx) {
+    var val = spans[idx] ? spans[idx].textContent.trim() : '';
+    if (val && val !== '—') parts.push(label.textContent.trim() + ' ' + val);
+  });
+  return parts.join('<br>');
+})(cells[6]) : '',
       origen:   cells[7] ? (cells[7].querySelector('.editable-cell') ? cells[7].querySelector('.editable-cell').textContent : cells[7].textContent) : '',
       cork:     cells[8] ? (cells[8].querySelector('.editable-cell') ? cells[8].querySelector('.editable-cell').textContent : cells[8].textContent) : '',
       pricesHtml: prices ? (function(p){
@@ -1692,7 +1701,9 @@ function prepareAndPrint() {
         var tmp = document.createElement('div');
         tmp.innerHTML = r.pricesHtml;
         tmp.querySelectorAll('div').forEach(function(d){
-          priceLinesHtml += '<div style="white-space:nowrap;padding:1px 0;border-bottom:1px solid #e2e8f0">' + d.innerHTML + '</div>';
+          var txt = d.textContent.trim();
+        txt = txt.replace(/(\d+[KkMm]?)(u\.|USD)/g, '$1 $2').replace(/u\.(USD)/g, 'u. $1');
+        priceLinesHtml += '<div style="white-space:nowrap;padding:1px 0;border-bottom:1px solid #e2e8f0">' + txt + '</div>';
         });
         if (!priceLinesHtml) priceLinesHtml = r.pricesHtml;
       }
@@ -2733,23 +2744,62 @@ function printProforma(entity) {
 }
 
 function piSavePDFtoDrive(htmlContent, piNumber) {
-  // Use html2canvas + jsPDF to generate PDF and upload to Drive
-  // Load jsPDF dynamically if not already loaded
-  if (typeof window.jspdf === 'undefined' && typeof window.jsPDF === 'undefined') {
-    var script = document.createElement('script');
-    script.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
-    script.onload = function() { piSavePDFtoDrive(htmlContent, piNumber); };
-    document.head.appendChild(script);
-    return;
-  }
-  try {
-    var jsPDFLib = window.jspdf ? window.jspdf.jsPDF : window.jsPDF;
-    var doc = new jsPDFLib({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-    // Use the HTML content stripped to text for now - use html() method
-    doc.html(htmlContent, {
-      callback: function(pdf) {
-        var pdfBase64 = pdf.output('datauristring').split(',')[1];
-        var fileName = piNumber.replace(/[^a-zA-Z0-9\-_]/g,'_') + '.pdf';
+  // Open HTML in hidden iframe, capture with html2canvas, save as PDF
+  var loadLibs = function(callback) {
+    var loaded = 0;
+    var total = 2;
+    var check = function() { if (++loaded === total) callback(); };
+    
+    if (typeof window.html2canvas === 'undefined') {
+      var s1 = document.createElement('script');
+      s1.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';
+      s1.onload = check;
+      document.head.appendChild(s1);
+    } else { check(); }
+    
+    if (typeof window.jspdf === 'undefined' && typeof window.jsPDF === 'undefined') {
+      var s2 = document.createElement('script');
+      s2.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
+      s2.onload = check;
+      document.head.appendChild(s2);
+    } else { check(); }
+  };
+
+  loadLibs(function() {
+    try {
+      // Create hidden container with the HTML
+      var container = document.createElement('div');
+      container.style.cssText = 'position:fixed;left:-9999px;top:0;width:794px;background:white;';
+      container.innerHTML = htmlContent.replace(/<script[\s\S]*?<\/script>/gi, '');
+      document.body.appendChild(container);
+
+      html2canvas(container, {
+        scale: 1.5,
+        useCORS: true,
+        allowTaint: true,
+        backgroundColor: '#ffffff',
+        width: 794,
+        windowWidth: 794
+      }).then(function(canvas) {
+        document.body.removeChild(container);
+        var jsPDFLib = (window.jspdf && window.jspdf.jsPDF) || window.jsPDF;
+        var doc = new jsPDFLib({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+        var imgData = canvas.toDataURL('image/jpeg', 0.92);
+        var pageW = 210;
+        var pageH = (canvas.height * pageW) / canvas.width;
+        var a4H = 297;
+        if (pageH <= a4H) {
+          doc.addImage(imgData, 'JPEG', 0, 0, pageW, pageH);
+        } else {
+          var y = 0;
+          while (y < pageH) {
+            doc.addImage(imgData, 'JPEG', 0, -y, pageW, pageH);
+            y += a4H;
+            if (y < pageH) doc.addPage();
+          }
+        }
+        var pdfBase64 = doc.output('datauristring').split(',')[1];
+        var fileName = piNumber.replace(/[^a-zA-Z0-9_]/g, '_') + '.pdf';
         var cbName = '__savePDF_' + Date.now();
         var scriptEl = document.createElement('script');
         window[cbName] = function(resp) {
@@ -2763,12 +2813,13 @@ function piSavePDFtoDrive(htmlContent, piNumber) {
         };
         scriptEl.src = SHEETS_URL + '?action=savePDF&pdfData=' + encodeURIComponent(pdfBase64) + '&fileName=' + encodeURIComponent(fileName) + '&callback=' + cbName;
         document.head.appendChild(scriptEl);
-      },
-      x: 0, y: 0, width: 210, windowWidth: 794
-    });
-  } catch(err) {
-    console.warn('Error generando PDF para Drive:', err);
-  }
+      }).catch(function(err) {
+        console.warn('html2canvas error:', err);
+      });
+    } catch(err) {
+      console.warn('Error generando PDF para Drive:', err);
+    }
+  });
 }
 
 
