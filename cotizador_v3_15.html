@@ -2744,6 +2744,7 @@ function printProforma(entity) {
 }
 
 function piSavePDFtoDrive(htmlContent, piNumber) {
+  console.log('piSavePDFtoDrive iniciado para:', piNumber);
   // Open HTML in hidden iframe, capture with html2canvas, save as PDF
   var loadLibs = function(callback) {
     var loaded = 0;
@@ -2766,6 +2767,7 @@ function piSavePDFtoDrive(htmlContent, piNumber) {
   };
 
   loadLibs(function() {
+    console.log('Libs cargadas, generando PDF...');
     try {
       // Create hidden container with the HTML
       var container = document.createElement('div');
@@ -2773,6 +2775,7 @@ function piSavePDFtoDrive(htmlContent, piNumber) {
       container.innerHTML = htmlContent.replace(/<script[\s\S]*?<\/script>/gi, '');
       document.body.appendChild(container);
 
+      console.log('Llamando html2canvas...');
       html2canvas(container, {
         scale: 1.5,
         useCORS: true,
