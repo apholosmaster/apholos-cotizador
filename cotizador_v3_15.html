@@ -2800,27 +2800,48 @@ function piSavePDFtoDrive(htmlContent, piNumber) {
         }
         var pdfBase64 = doc.output('datauristring').split(',')[1];
         var fileName = piNumber.replace(/[^a-zA-Z0-9_]/g, '_') + '.pdf';
-        // Use fetch POST to avoid URL length limits
-        fetch(SHEETS_URL, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            action: 'savePDF',
-            pdfData: pdfBase64,
-            fileName: fileName
-          })
-        })
-        .then(function(r) { return r.json(); })
-        .then(function(resp) {
-          if (resp && resp.fileId) {
-            console.log('PDF guardado en Drive:', resp.url);
-          } else if (resp && resp.error) {
-            console.warn('Error guardando PDF:', resp.error);
+        // Send PDF via JSONP in chunks to avoid URL length limits
+        var CHUNK_SIZE = 50000;
+        var chunks = [];
+        for (var ci = 0; ci < pdfBase64.length; ci += CHUNK_SIZE) {
+          chunks.push(pdfBase64.slice(ci, ci + CHUNK_SIZE));
+        }
+        var sessionId = 'pdf_' + Date.now();
+        var totalChunks = chunks.length;
+        
+        function sendChunk(idx) {
+          if (idx >= totalChunks) {
+            // All chunks sent, now finalize
+            var cbName = '__pdfDone_' + Date.now();
+            var scriptEl = document.createElement('script');
+            window[cbName] = function(resp) {
+              delete window[cbName];
+              if (scriptEl.parentNode) scriptEl.parentNode.removeChild(scriptEl);
+              if (resp && resp.fileId) {
+                console.log('PDF guardado en Drive:', resp.url);
+              } else if (resp && resp.error) {
+                console.warn('Error guardando PDF:', resp.error);
+              }
+            };
+            scriptEl.src = SHEETS_URL + '?action=finalizePDF&sessionId=' + sessionId + '&fileName=' + encodeURIComponent(fileName) + '&callback=' + cbName;
+            document.head.appendChild(scriptEl);
+            return;
           }
-        })
-        .catch(function(err) {
-          console.warn('Error subiendo PDF a Drive:', err);
-        });
+          var cbName = '__pdfChunk_' + Date.now() + '_' + idx;
+          var scriptEl = document.createElement('script');
+          window[cbName] = function(resp) {
+            delete window[cbName];
+            if (scriptEl.parentNode) scriptEl.parentNode.removeChild(scriptEl);
+            if (resp && resp.ok) {
+              sendChunk(idx + 1);
+            } else {
+              console.warn('Error enviando chunk', idx, resp);
+            }
+          };
+          scriptEl.src = SHEETS_URL + '?action=uploadPDFChunk&sessionId=' + sessionId + '&chunkIdx=' + idx + '&totalChunks=' + totalChunks + '&chunk=' + encodeURIComponent(chunks[idx]) + '&callback=' + cbName;
+          document.head.appendChild(scriptEl);
+        }
+        sendChunk(0);
       }).catch(function(err) {
         console.warn('html2canvas error:', err);
       });
