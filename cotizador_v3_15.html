@@ -2782,7 +2782,16 @@ function piSavePDFtoDrive(htmlContent, piNumber) {
         allowTaint: true,
         backgroundColor: '#ffffff',
         width: 794,
-        windowWidth: 794
+        windowWidth: 794,
+        imageTimeout: 3000,
+        onclone: function(doc) {
+          // Remove broken images to avoid hanging
+          doc.querySelectorAll('img').forEach(function(img) {
+            if (!img.complete || img.naturalWidth === 0) {
+              img.style.display = 'none';
+            }
+          });
+        }
       }).then(function(canvas) {
         document.body.removeChild(container);
         var jsPDFLib = (window.jspdf && window.jspdf.jsPDF) || window.jsPDF;
