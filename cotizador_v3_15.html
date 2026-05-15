@@ -2745,52 +2745,181 @@ function printProforma(entity) {
 
 function piSavePDFtoDrive(htmlContent, piNumber) {
   console.log('piSavePDFtoDrive iniciado para:', piNumber);
-  // Send HTML directly to Apps Script to convert to PDF via Google Docs
-  var fileName = piNumber.replace(/[^a-zA-Z0-9_]/g, '_') + '.pdf';
-  var encoded = encodeURIComponent(htmlContent);
-  
-  // Split into chunks and send
-  var CHUNK_SIZE = 50000;
-  var chunks = [];
-  for (var ci = 0; ci < encoded.length; ci += CHUNK_SIZE) {
-    chunks.push(encoded.slice(ci, ci + CHUNK_SIZE));
-  }
-  var sessionId = 'pdf_' + Date.now();
-  var totalChunks = chunks.length;
-  console.log('Enviando', totalChunks, 'chunks al script...');
+  // Open HTML in hidden iframe, capture with html2canvas, save as PDF
+  var loadLibs = function(callback) {
+    var loaded = 0;
+    var total = 2;
+    var check = function() { if (++loaded === total) callback(); };
+    
+    if (typeof window.html2canvas === 'undefined') {
+      var s1 = document.createElement('script');
+      s1.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';
+      s1.onload = check;
+      document.head.appendChild(s1);
+    } else { check(); }
+    
+    if (typeof window.jspdf === 'undefined' && typeof window.jsPDF === 'undefined') {
+      var s2 = document.createElement('script');
+      s2.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
+      s2.onload = check;
+      document.head.appendChild(s2);
+    } else { check(); }
+  };
 
-  function sendChunk(idx) {
-    if (idx >= totalChunks) {
-      var cbName = '__pdfDone_' + Date.now();
-      var scriptEl = document.createElement('script');
-      window[cbName] = function(resp) {
-        delete window[cbName];
-        if (scriptEl.parentNode) scriptEl.parentNode.removeChild(scriptEl);
-        if (resp && resp.fileId) {
-          console.log('PDF guardado en Drive:', resp.url);
-        } else if (resp && resp.error) {
-          console.warn('Error guardando PDF:', resp.error);
+  loadLibs(function() {
+    console.log('Libs cargadas, generando PDF...');
+    try {
+      // Create hidden container with the HTML
+      var container = document.createElement('div');
+      container.style.cssText = 'position:fixed;left:-9999px;top:0;width:794px;background:white;';
+      container.innerHTML = htmlContent.replace(/<script[\s\S]*?<\/script>/gi, '');
+      document.body.appendChild(container);
+
+      console.log('Llamando html2canvas...');
+      html2canvas(container, {
+        scale: 1.5,
+        useCORS: true,
+        allowTaint: true,
+        backgroundColor: '#ffffff',
+        width: 794,
+        windowWidth: 794
+      }).then(function(canvas) {
+        document.body.removeChild(container);
+        var jsPDFLib = (window.jspdf && window.jspdf.jsPDF) || window.jsPDF;
+        var doc = new jsPDFLib({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+        var imgData = canvas.toDataURL('image/jpeg', 0.92);
+        var pageW = 210;
+        var pageH = (canvas.height * pageW) / canvas.width;
+        var a4H = 297;
+        if (pageH <= a4H) {
+          doc.addImage(imgData, 'JPEG', 0, 0, pageW, pageH);
+        } else {
+          var y = 0;
+          while (y < pageH) {
+            doc.addImage(imgData, 'JPEG', 0, -y, pageW, pageH);
+            y += a4H;
+            if (y < pageH) doc.addPage();
+          }
         }
-      };
-      scriptEl.src = SHEETS_URL + '?action=finalizeHTML&sessionId=' + sessionId + '&fileName=' + encodeURIComponent(fileName) + '&totalChunks=' + totalChunks + '&callback=' + cbName;
-      document.head.appendChild(scriptEl);
-      return;
+        var pdfBase64 = doc.output('datauristring').split(',')[1];
+        var fileName = piNumber.replace(/[^a-zA-Z0-9_]/g, '_') + '.pdf';
+        // Send PDF via JSONP in chunks to avoid URL length limits
+        var CHUNK_SIZE = 50000;
+        var chunks = [];
+        for (var ci = 0; ci < pdfBase64.length; ci += CHUNK_SIZE) {
+          chunks.push(pdfBase64.slice(ci, ci + CHUNK_SIZE));
+        }
+        var sessionId = 'pdf_' + Date.now();
+        var totalChunks = chunks.length;
+        
+        function sendChunk(idx) {
+          if (idx >= totalChunks) {
+            // All chunks sent, now finalize
+            var cbName = '__pdfDone_' + Date.now();
+            var scriptEl = document.createElement('script');
+            window[cbName] = function(resp) {
+              delete window[cbName];
+              if (scriptEl.parentNode) scriptEl.parentNode.removeChild(scriptEl);
+              if (resp && resp.fileId) {
+                console.log('PDF guardado en Drive:', resp.url);
+              } else if (resp && resp.error) {
+                console.warn('Error guardando PDF:', resp.error);
+              }
+            };
+            scriptEl.src = SHEETS_URL + '?action=finalizePDF&sessionId=' + sessionId + '&fileName=' + encodeURIComponent(fileName) + '&callback=' + cbName;
+            document.head.appendChild(scriptEl);
+            return;
+          }
+          var cbName = '__pdfChunk_' + Date.now() + '_' + idx;
+          var scriptEl = document.createElement('script');
+          window[cbName] = function(resp) {
+            delete window[cbName];
+            if (scriptEl.parentNode) scriptEl.parentNode.removeChild(scriptEl);
+            if (resp && resp.ok) {
+              sendChunk(idx + 1);
+            } else {
+              console.warn('Error enviando chunk', idx, resp);
+            }
+          };
+          scriptEl.src = SHEETS_URL + '?action=uploadPDFChunk&sessionId=' + sessionId + '&chunkIdx=' + idx + '&totalChunks=' + totalChunks + '&chunk=' + encodeURIComponent(chunks[idx]) + '&callback=' + cbName;
+          document.head.appendChild(scriptEl);
+        }
+        sendChunk(0);
+      }).catch(function(err) {
+        console.warn('html2canvas error:', err);
+      });
+    } catch(err) {
+      console.warn('Error generando PDF para Drive:', err);
     }
-    var cbName = '__pdfChunk_' + Date.now() + '_' + idx;
-    var scriptEl = document.createElement('script');
-    window[cbName] = function(resp) {
-      delete window[cbName];
-      if (scriptEl.parentNode) scriptEl.parentNode.removeChild(scriptEl);
-      if (resp && resp.ok) {
-        sendChunk(idx + 1);
-      } else {
-        console.warn('Error enviando chunk', idx, resp);
-      }
-    };
-    scriptEl.src = SHEETS_URL + '?action=uploadPDFChunk&sessionId=' + sessionId + '&chunkIdx=' + idx + '&totalChunks=' + totalChunks + '&chunk=' + encodeURIComponent(chunks[idx]) + '&callback=' + cbName;
-    document.head.appendChild(scriptEl);
-  }
-  sendChunk(0);
+  });
 }
 
->
+
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') {
+    var qm = document.getElementById('quote-modal');
+    if (qm) qm.remove();
+  }
+});
+
+// init
+loadNewItems().then(function() {
+  updateMaterials();
+  applyFilters();
+});
+</script>
+
+<div class="lightbox" id="lightbox" onclick="closeLightbox()">
+  <img id="lightbox-img" src="" alt="Product">
+</div>
+
+
+<div id="float-scroll"><div id="float-scroll-inner"></div></div>
+
+
+
+<script>
+(function() {
+  function setup() {
+    var floatBar   = document.getElementById('float-scroll');
+    var floatInner = document.getElementById('float-scroll-inner');
+    var tblWrap    = document.getElementById('tbl-wrap');
+    if (!floatBar || !floatInner || !tblWrap) return;
+
+    function syncWidth() {
+      var table = tblWrap.querySelector('table');
+      if (table) floatInner.style.width = table.scrollWidth + 'px';
+    }
+    syncWidth();
+
+    var syncing = false;
+
+    floatBar.addEventListener('scroll', function() {
+      if (syncing) return;
+      syncing = true;
+      tblWrap.scrollLeft = floatBar.scrollLeft;
+      setTimeout(function(){ syncing = false; }, 20);
+    });
+
+    tblWrap.addEventListener('scroll', function() {
+      if (syncing) return;
+      syncing = true;
+      floatBar.scrollLeft = tblWrap.scrollLeft;
+      setTimeout(function(){ syncing = false; }, 20);
+    });
+
+    // Re-sync width when table re-renders
+    var observer = new MutationObserver(syncWidth);
+    var tbody = document.getElementById('tbody');
+    if (tbody) observer.observe(tbody, { childList: true });
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', setup);
+  } else {
+    setTimeout(setup, 300);
+  }
+})();
+</script>
+</body>
+</html>
