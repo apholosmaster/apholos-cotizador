@@ -230,8 +230,14 @@ input.row-check {
   #quote-modal {
     position: static !important; background: none !important;
     padding: 0 !important; display: block !important;
+    margin: 0 auto !important;
   }
-  .quote-modal-inner { box-shadow: none !important; border-radius: 0 !important; }
+  .quote-modal-inner {
+    box-shadow: none !important; border-radius: 0 !important;
+    margin: 0 auto !important;
+    width: 100% !important;
+    max-width: 100% !important;
+  }
 
   /* Force colors */
   * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; color-adjust: exact !important; }
@@ -855,11 +861,14 @@ function applyFilters() {
       if (!matchAg) return false;
     }
 
-    // FREE TEXT
+    // FREE TEXT — comma-separated words = AND (all must match)
     if (search) {
       var hay = [item.desc, item.material, item.mat_raw, item.medida,
                  item.cliente, item.color, item.cork, item.codigo, item.agente].join(' ').toLowerCase();
-      if (hay.indexOf(search) < 0) return false;
+      var words = search.split(',').map(function(w){ return w.trim(); }).filter(function(w){ return w.length > 0; });
+      for (var wi = 0; wi < words.length; wi++) {
+        if (hay.indexOf(words[wi]) < 0) return false;
+      }
     }
 
     // PRICE RANGE — check if item has at least one price within range
@@ -896,6 +905,9 @@ function applyFilters() {
   var n = filtered.length;
   document.getElementById('hcount').textContent = n;
   document.getElementById('rcount').textContent = n;
+
+  // Show most recently loaded items first (reverse order)
+  filtered = filtered.slice().reverse();
 
   renderTable(filtered, qtysWithData);
   updateSummary(filtered, qtysWithData);
@@ -1525,7 +1537,7 @@ function openQuoteModal() {
         '<div class="quote-meta-field"><label>' + (LANG==='en'?'Client':'Cliente') + '</label><input id="q-client" type="text" ' + (LANG==='en'?'placeholder="Client name"':'placeholder="Nombre del cliente"') + '></div>' +
         '<div class="quote-meta-field"><label>' + (LANG==='en'?'Agent':'Agente') + '</label><select id="q-agent">' + agentOpts + '</select></div>' +
         '<div class="quote-meta-field"><label>' + (LANG==='en'?'Date':'Fecha') + '</label><input id="q-date" type="text" value="' + new Date().toLocaleDateString('en-GB', {day:'2-digit',month:'long',year:'numeric'}) + '"></div>' +
-        '<div class="quote-meta-field"><label>Incoterm</label><select id="q-incoterm"><option>FCA</option><option>DAP</option><option>CIF</option></select></div>' +
+        '<div class="quote-meta-field"><label>Incoterm</label><select id="q-incoterm"><option value="">—</option><option>FCA</option><option>DAP</option><option>DDP</option><option>CIF</option><option>EXW</option><option>TBA</option></select></div>' +
         '<div class="quote-meta-field"><label>' + (LANG==='en'?'Origin':'Origen') + '</label><select id="q-origin"><option value="">— Seleccionar —</option><option>BUENOS AIRES</option><option>DONGGUAN</option><option>BUENOS AIRES + DONGGUAN</option></select></div>' +
       '</div>' +
       '<div style="overflow-x:auto;width:100%">' +
