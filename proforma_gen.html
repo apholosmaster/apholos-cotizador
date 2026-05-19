@@ -694,7 +694,7 @@ var ENTITY_DATA = {
     footnote: '',
     leadNote: '',
     tcType: 'int',
-    sigLine: true
+    sigLine: false
   },
   LB: {
     name: 'LIONBERT LLC',
@@ -1307,7 +1307,15 @@ function buildPIDoc() {
 
     (ed.footnote ? '<div class="pi-footnote">' + esc(ed.footnote) + '</div>' : '') +
     (ed.leadNote ? '<p style="font-size:9px;margin-top:8px">' + esc(ed.leadNote) + '</p>' : '') +
-    (ed.sigLine ? '<div style="text-align:right;margin-top:16px;padding-top:8px;border-top:1px solid #000;display:inline-block;min-width:220px;font-size:9px">Customer\'s Authorized Signature</div>' : '');
+    (ed.sigLine ? '<div style="text-align:right;margin-top:16px;padding-top:8px;border-top:1px solid #000;display:inline-block;min-width:220px;font-size:9px">Customer\'s Authorized Signature</div>' : '') +
+    '<div style="margin-top:40px;display:flex;gap:48px;justify-content:flex-end">' +
+      '<div style="text-align:center;min-width:180px">' +
+        '<div style="border-top:1px solid #000;padding-top:4px;font-size:9px">Authorized Signature</div>' +
+      '</div>' +
+      '<div style="text-align:center;min-width:140px">' +
+        '<div style="border-top:1px solid #000;padding-top:4px;font-size:9px">Date</div>' +
+      '</div>' +
+    '</div>';
 
   document.getElementById('pi-doc').innerHTML = html;
 }
