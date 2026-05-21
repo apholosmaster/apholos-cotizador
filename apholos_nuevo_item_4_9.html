@@ -355,6 +355,10 @@
         <label>Cliente <span class="req">*</span></label>
         <input type="text" id="cliente" placeholder="Nombre del cliente">
       </div>
+      <div class="field">
+        <label>Marca</label>
+        <input type="text" id="brand" placeholder="Ej: Apholos, Lionbert…">
+      </div>
       <div class="field span-2">
         <label>Descripción <span class="req">*</span></label>
         <textarea id="desc" placeholder="Descripción completa del producto" rows="2"></textarea>
@@ -682,7 +686,7 @@ function processImage(file) {
     img.onload = function() {
       // Compress
       const canvas = document.createElement('canvas');
-      const MAX = 150;
+      const MAX = 600;
       let w = img.width, h = img.height;
       if (w > MAX || h > MAX) {
         if (w > h) { h = Math.round(h * MAX / w); w = MAX; }
@@ -690,7 +694,7 @@ function processImage(file) {
       }
       canvas.width = w; canvas.height = h;
       canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-      const base64 = canvas.toDataURL('image/jpeg', 0.3).split(',')[1];
+      const base64 = canvas.toDataURL('image/jpeg', 0.82).split(',')[1];
       const dataUrl = 'data:image/jpeg;base64,' + base64;
       showPreview(dataUrl);
       storeImageLocally(dataUrl);
@@ -716,7 +720,7 @@ function storeImageLocally(dataUrl) {
   // Calculate size in KB
   const base64 = dataUrl.split(',')[1] || dataUrl;
   const sizeKB = Math.round((base64.length * 3) / 4 / 1024);
-  const MAX_KB = 60;
+  const MAX_KB = 200;
 
   const idEl = document.getElementById('img-id');
   document.getElementById('img-uploading').classList.remove('visible');
