@@ -686,7 +686,7 @@ function processImage(file) {
     img.onload = function() {
       // Compress
       const canvas = document.createElement('canvas');
-      const MAX = 600;
+      const MAX = 500;
       let w = img.width, h = img.height;
       if (w > MAX || h > MAX) {
         if (w > h) { h = Math.round(h * MAX / w); w = MAX; }
@@ -720,7 +720,7 @@ function storeImageLocally(dataUrl) {
   // Calculate size in KB
   const base64 = dataUrl.split(',')[1] || dataUrl;
   const sizeKB = Math.round((base64.length * 3) / 4 / 1024);
-  const MAX_KB = 200;
+  const MAX_KB = 150;
 
   const idEl = document.getElementById('img-id');
   document.getElementById('img-uploading').classList.remove('visible');
@@ -814,11 +814,15 @@ function submitForm() {
     cuno:        document.getElementById('cuno') ? document.getElementById('cuno').value.trim() : ''
   };
 
-  const cbName = '__add_item_' + Date.now();
-  const script = document.createElement('script');
-  window[cbName] = function(resp) {
-    delete window[cbName];
-    script.remove();
+  // Also add brand
+  params.brand = document.getElementById('brand') ? document.getElementById('brand').value.trim() : '';
+
+  fetch(SHEETS_URL, {
+    method: 'POST',
+    body: JSON.stringify(params)
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(resp) {
     btn.disabled = false;
     btn.innerHTML = '<span>✓</span> Guardar en Pricing Sheet';
     if (resp && resp.ok) {
@@ -829,21 +833,14 @@ function submitForm() {
       const errMsg = resp && resp.error ? resp.error : (resp ? JSON.stringify(resp) : 'sin respuesta del servidor');
       setStatus('Error: ' + errMsg, 'error');
       showToast('✗ ' + errMsg, true);
-      console.error('Respuesta del servidor:', resp);
     }
-  };
-  script.onerror = function() {
+  })
+  .catch(function(err) {
     btn.disabled = false;
     btn.innerHTML = '<span>✓</span> Guardar en Pricing Sheet';
     setStatus('Error de conexión con el servidor.', 'error');
-  };
-
-  let url = SHEETS_URL + '?callback=' + cbName;
-  Object.keys(params).forEach(function(k) {
-    url += '&' + k + '=' + encodeURIComponent(params[k]);
+    console.error(err);
   });
-  script.src = url;
-  document.head.appendChild(script);
 }
 
 function setStatus(msg, type) {
