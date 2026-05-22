@@ -385,6 +385,18 @@
   </div>
 </div>
 
+<div id="new-pi-overlay" style="display:none;position:fixed;inset:0;z-index:8000;background:rgba(15,23,42,0.7);align-items:center;justify-content:center">
+  <div style="background:#fff;border-radius:16px;padding:36px 40px;max-width:420px;width:90%;box-shadow:0 20px 60px rgba(0,0,0,.3);text-align:center">
+    <div style="font-size:32px;margin-bottom:12px">📋</div>
+    <div style="font-size:16px;font-weight:700;color:#0f172a;margin-bottom:6px">You have an active proforma</div>
+    <div id="overlay-pi-num" style="font-size:22px;font-weight:900;color:#f97316;margin-bottom:20px"></div>
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <button onclick="closeNewPIOverlay()" style="padding:14px;border-radius:8px;background:#f97316;color:#fff;font-size:14px;font-weight:700;border:none;cursor:pointer">Continue editing this proforma</button>
+      <button onclick="closeNewPIOverlay();newProforma();" style="padding:14px;border-radius:8px;background:#f1f5f9;color:#334155;font-size:14px;font-weight:600;border:none;cursor:pointer;border:1px solid #e2e8f0">Start a new proforma</button>
+    </div>
+  </div>
+</div>
+
 <div id="app">
 
   <!-- Top Bar -->
@@ -393,13 +405,22 @@
     <div class="sep"></div>
     <div class="step-label" id="topbar-label">Select entity to begin</div>
     <div style="margin-left:auto;display:flex;gap:8px;align-items:center">
-      <span id="pi-number-display" style="font-size:13px;font-weight:700;color:#f97316;min-width:100px;text-align:right"></span>
+      <span id="pi-number-display" style="font-size:13px;font-weight:700;color:#f97316"></span>
     </div>
     <button onclick="logoutVendor()" style="margin-left:8px;background:#334155;border:none;border-radius:6px;padding:5px 12px;font-size:11px;font-weight:600;color:#e2e8f0;cursor:pointer">⇄ Change user</button>
   </div>
 
+  <!-- Active Proforma Banner -->
+  <div id="active-pi-banner" style="display:none;background:#fff7ed;border-bottom:2px solid #f97316;padding:10px 24px;align-items:center;gap:12px">
+    <span style="font-size:13px;color:#92400e">⚠️ Active proforma:</span>
+    <span id="banner-pi-num" style="font-size:15px;font-weight:900;color:#f97316"></span>
+    <span style="font-size:12px;color:#b45309">— You are editing or have loaded this proforma</span>
+    <button onclick="newProforma()" style="margin-left:auto;background:#f97316;color:#fff;border:none;border-radius:6px;padding:6px 16px;font-size:12px;font-weight:700;cursor:pointer">✕ Clear & Start New Proforma</button>
+  </div>
+
   <!-- Steps Bar -->
   <div id="steps-bar">
+    <button onclick="newProforma()" style="margin:0 12px 0 0;padding:6px 16px;background:#f97316;color:#fff;border:none;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;letter-spacing:.03em;flex-shrink:0;align-self:center">NEW</button>
     <div class="step-tab active" id="tab-1" onclick="goStep(1);loadProformaList();">
       <span class="num">1</span> Entity
     </div>
@@ -455,14 +476,7 @@
           <span>📂 Load Existing Proforma (to create new version)</span>
           <button class="btn btn-ghost" style="font-size:11px;padding:2px 8px" onclick="toggleProformaList()">Show list ▾</button>
         </div>
-        <div style="display:flex;gap:10px;align-items:center">
-          <input type="text" id="load-pi-input" placeholder="e.g. APH00003" 
-            style="flex:1;border:1px solid #e2e8f0;border-radius:6px;padding:8px 12px;font-size:13px;outline:none"
-            onkeydown="if(event.key==='Enter') loadExistingProforma()">
-          <button class="btn btn-secondary" onclick="loadExistingProforma()">Load →</button>
-        </div>
-        <div id="load-pi-status" style="font-size:12px;margin-top:8px;color:#64748b"></div>
-        <div id="proforma-list-wrap" style="display:none;margin-top:12px">
+        <div id="proforma-list-wrap" style="display:none;margin-top:4px">
           <div style="display:flex;gap:8px;margin-bottom:8px;align-items:center">
             <input type="text" id="proforma-list-search" placeholder="Filter by client, number, brand…" 
               oninput="filterProformaList()"
@@ -494,6 +508,13 @@
             </table>
           </div>
         </div>
+        <div style="display:flex;gap:10px;align-items:center;margin-top:12px">
+          <input type="text" id="load-pi-input" placeholder="e.g. APH00003" 
+            style="flex:1;border:1px solid #e2e8f0;border-radius:6px;padding:8px 12px;font-size:13px;outline:none"
+            onkeydown="if(event.key==='Enter') loadExistingProforma()">
+          <button class="btn btn-secondary" onclick="loadExistingProforma()">Load →</button>
+        </div>
+        <div id="load-pi-status" style="font-size:12px;margin-top:6px;color:#64748b"></div>
       </div>
     </div>
 
@@ -709,7 +730,7 @@
       <span class="title" id="preview-pi-num">Preview</span>
       <div class="actions">
         <div id="confirm-preview-bar" style="display:none;gap:8px;align-items:center;margin-right:12px;flex-wrap:nowrap">
-          <button onclick="closePreview();goStep(1);loadProformaList();" style="padding:5px 10px;border-radius:5px;font-size:11px;font-weight:600;cursor:pointer;border:none;background:#64748b;color:#fff">🏢 Entity</button>
+          <button onclick="if(state.piNumber && state.piNumber.indexOf('XXXXX')<0){closePreview();showNewPIOverlay();}else{closePreview();goStep(1);loadProformaList();}" style="padding:5px 10px;border-radius:5px;font-size:11px;font-weight:600;cursor:pointer;border:none;background:#64748b;color:#fff">🏢 Entity</button>
           <button onclick="closePreview();goStep(2);switchItemsTab('search');" style="padding:5px 10px;border-radius:5px;font-size:11px;font-weight:600;cursor:pointer;border:none;background:#475569;color:#fff">✏️ Items</button>
           <button onclick="closePreview();goStep(3);" style="padding:5px 10px;border-radius:5px;font-size:11px;font-weight:600;cursor:pointer;border:none;background:#334155;color:#fff">← Details</button>
           <button onclick="closePreview();generateProforma();" style="padding:5px 12px;border-radius:5px;font-size:11px;font-weight:600;cursor:pointer;border:none;background:#22c55e;color:#fff">✓ Confirm</button>
@@ -946,9 +967,12 @@ function renderItemsTable() {
     var imgSrc = it.img ? it.img : '';
     var realIdx = state.allItems.indexOf(it);
     var imgTag = imgSrc ? '<img class="thumb" src="' + imgSrc + '" data-fileid="' + esc(it._origFileId||'') + '" onerror="this.style.display=\'none\'">' : '<div class="thumb" style="background:#f1f5f9;border-radius:4px;width:32px;height:32px"></div>';
+    var moldTag = (it.molde_usd && parseFloat(it.molde_usd) > 0)
+      ? '<span title="Mold cost" style="display:inline-block;background:#fef3c7;color:#92400e;font-size:9px;font-weight:700;padding:1px 5px;border-radius:4px;margin-left:4px">MOLD $' + parseFloat(it.molde_usd).toFixed(0) + '</span>'
+      : '';
     html += '<tr>' +
       '<td>' + imgTag + '</td>' +
-      '<td style="max-width:220px">' + esc(it.desc || '') + (it.color && it.color !== '—' ? ' <span style="color:#94a3b8;font-size:11px">· ' + esc(it.color) + '</span>' : '') + '</td>' +
+      '<td style="max-width:220px">' + esc(it.desc || '') + (it.color && it.color !== '—' ? ' <span style="color:#94a3b8;font-size:11px">· ' + esc(it.color) + '</span>' : '') + moldTag + '</td>' +
       '<td style="color:#64748b;font-size:11px">' + esc(it.codigo || '') + '</td>' +
       '<td style="color:#64748b;font-size:11px">' + esc(it.material || '') + '</td>' +
       '<td style="color:#64748b;font-size:10px">' + priceList + '</td>' +
@@ -975,6 +999,51 @@ function addToCart(itemIdx) {
   state.cart.push({ item: it, qty: defQty, price: defPrice, desc: descParts.filter(Boolean).join(', '), availableQtys: qtys });
   renderCart();
   renderItemsTable();
+  updateSummary();
+  // If item has mold cost, show mold prompt
+  if (it.molde_usd && parseFloat(it.molde_usd) > 0) {
+    showMoldPrompt(it, parseFloat(it.molde_usd));
+  }
+}
+
+function showMoldPrompt(it, moldCost) {
+  var existing = document.getElementById('mold-prompt');
+  if (existing) existing.remove();
+  var d = document.createElement('div');
+  d.id = 'mold-prompt';
+  d.style.cssText = 'position:fixed;bottom:24px;right:24px;z-index:7000;background:#fff;border:1px solid #fcd34d;border-radius:12px;padding:16px 20px;box-shadow:0 8px 32px rgba(0,0,0,.15);max-width:320px';
+  d.innerHTML =
+    '<div style="font-size:12px;font-weight:700;color:#92400e;margin-bottom:4px">🔧 This item has a mold cost</div>' +
+    '<div style="font-size:22px;font-weight:900;color:#f97316;margin-bottom:10px">$' + moldCost.toFixed(2) + '</div>' +
+    '<div style="font-size:12px;color:#64748b;margin-bottom:12px">Include mold cost as a separate line item?</div>' +
+    '<div style="display:flex;gap:8px">' +
+      '<button id="mold-yes-btn" onclick="addMoldFromPrompt()" ' +
+        'data-molddesc="' + esc(it.molde_notas||'Mold cost') + '" data-moldprice="' + moldCost + '" ' +
+        'style="flex:1;padding:8px;background:#f97316;color:#fff;border:none;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer">Yes, include</button>' +
+      '<button onclick="closeMoldPrompt()" ' +
+        'style="flex:1;padding:8px;background:#f1f5f9;color:#475569;border:1px solid #e2e8f0;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer">No (reorder)</button>' +
+    '</div>';
+  document.body.appendChild(d);
+  setTimeout(function(){ if(document.getElementById('mold-prompt')) document.getElementById('mold-prompt').remove(); }, 15000);
+}
+
+function closeMoldPrompt() {
+  var p = document.getElementById('mold-prompt');
+  if (p) p.remove();
+}
+
+function addMoldFromPrompt() {
+  var btn = document.getElementById('mold-yes-btn');
+  if (!btn) return;
+  var desc = btn.getAttribute('data-molddesc') || 'Mold cost';
+  var price = parseFloat(btn.getAttribute('data-moldprice')) || 0;
+  closeMoldPrompt();
+  addMoldToCart(desc, price);
+}
+
+function addMoldToCart(desc, price) {
+  state.cart.push({ item: null, qty: 1, price: price, desc: desc || 'Mold cost', availableQtys: [] });
+  renderCart();
   updateSummary();
 }
 
@@ -1131,6 +1200,12 @@ function selectEntity(e) {
   // Show BRP currency card
   var brpCard = document.getElementById('brp-currency-card');
   if (brpCard) brpCard.style.display = (e === 'BRP') ? '' : 'none';
+  // Hide incoterm/incoplace for BRP
+  var isBRP = (e === 'BRP');
+  ['f-incoterm', 'f-incoplace', 'f-incoplace-custom-wrap'].forEach(function(id) {
+    var el = document.getElementById(id);
+    if (el) el.closest('.field') && (el.closest('.field').style.display = isBRP ? 'none' : '');
+  });
   // Populate agents
   populateAgents();
   updateSummary();
@@ -1148,6 +1223,11 @@ function populateAgents() {
 function goStep(n) {
   var tabs = ['tab-1','tab-2','tab-3','tab-4'];
   var panels = ['step-1','step-2','step-3','step-4'];
+  // If going to step 1 with a confirmed proforma active, show overlay
+  if (n === 1 && state.piNumber && state.piNumber.indexOf('XXXXX') < 0 && state.step > 1) {
+    showNewPIOverlay();
+    return;
+  }
   if (!canGoToStep(n)) return;
   state.step = n;
   tabs.forEach(function(t,i){ 
@@ -1241,6 +1321,8 @@ function generateProforma() {
     var newNum = base + '-V' + (getNextVersion(state.loadedFrom));
     state.piNumber = newNum;
     document.getElementById('pi-number-display').textContent = newNum;
+    document.getElementById('banner-pi-num').textContent = newNum;
+    document.getElementById('active-pi-banner').style.display = 'flex';
     document.getElementById('step4-pi-num').textContent = newNum;
     document.getElementById('preview-pi-num').textContent = newNum;
     hideLoading();
@@ -1255,6 +1337,8 @@ function generateProforma() {
   getProformaNumber(state.entity, function(num) {
     state.piNumber = num;
     document.getElementById('pi-number-display').textContent = num;
+    document.getElementById('banner-pi-num').textContent = num;
+    document.getElementById('active-pi-banner').style.display = 'flex';
     document.getElementById('step4-pi-num').textContent = num;
     document.getElementById('preview-pi-num').textContent = num;
     hideLoading();
@@ -1473,15 +1557,15 @@ function _renderPIHtml(p) {
         '<th>' + (isBRP?'Orden de compra':'Purchase Order') + '</th>' +
         '<th>' + (isBRP?'Lead time':'ETD') + '</th>' +
         '<th>' + (isBRP?'Moneda':'Ships Via') + '</th>' +
-        '<th>' + (isBRP?'Agente':'Shipment Terms') + '</th>' +
-        '<th>' + (isBRP?'Condición de venta':'Sales Rep') + '</th>' +
-        '<th>' + (isBRP?'':'Terms') + '</th>' +
+        (isBRP ? '' : '<th>Shipment Terms</th>') +
+        '<th>' + (isBRP?'Agente':'Sales Rep') + '</th>' +
+        '<th>' + (isBRP?'Condición de venta':'Terms') + '</th>' +
       '</tr></thead>' +
       '<tbody><tr>' +
         '<td>' + esc(po) + '</td>' +
         '<td>' + esc(etd) + '</td>' +
-        '<td>' + esc(via) + '</td>' +
-        '<td>' + esc(shipterm) + '</td>' +
+        '<td>' + (isBRP ? esc(currency) : esc(via)) + '</td>' +
+        (isBRP ? '' : '<td>' + esc(shipterm) + '</td>') +
         '<td>' + esc(agent) + '</td>' +
         '<td>' + esc(terms) + '</td>' +
       '</tr></tbody>' +
@@ -1599,6 +1683,18 @@ function printAndSave() {
 }
 
 // ── New Proforma ──────────────────────────────────────────────────
+function promptNewProforma() { newProforma(); }
+
+function showNewPIOverlay() {
+  var num = state.piNumber;
+  if (!num || num.indexOf('XXXXX') >= 0) { newProforma(); return; }
+  document.getElementById('overlay-pi-num').textContent = num;
+  document.getElementById('new-pi-overlay').style.display = 'flex';
+}
+
+function closeNewPIOverlay() {
+  document.getElementById('new-pi-overlay').style.display = 'none';
+}
 function newProforma() {
   if (!confirm('Start a new proforma? Current data will be cleared.')) return;
   state.entity = null;
@@ -1607,6 +1703,8 @@ function newProforma() {
   state.loadedFrom = null;
   state.filterSelected = false;
   document.getElementById('pi-number-display').textContent = '';
+  document.getElementById('active-pi-banner').style.display = 'none';
+  document.getElementById('banner-pi-num').textContent = '';
   document.getElementById('drive-link-wrap').style.display = 'none';
   document.querySelectorAll('.entity-card').forEach(function(el){ el.classList.remove('selected'); });
   document.getElementById('btn-next').disabled = true;
@@ -1875,6 +1973,8 @@ function loadExistingProforma() {
     document.getElementById('f-date').value = new Date().toLocaleDateString('en-US', {month:'short', day:'numeric', year:'numeric'});
     state.piNumber = s.piNumber || num;  // show real number in preview
     document.getElementById('pi-number-display').textContent = s.piNumber || num;
+    document.getElementById('banner-pi-num').textContent = s.piNumber || num;
+    document.getElementById('active-pi-banner').style.display = 'flex';
     state.loadedFrom = num;  // remember base number for versioning
     document.getElementById('load-pi-status').innerHTML = '<span style="color:#22c55e">✓ Loaded ' + num + ' — will generate as ' + num.replace(/-V\d+$/, '') + '-V' + getNextVersion(num) + '</span>';
     renderCart();
