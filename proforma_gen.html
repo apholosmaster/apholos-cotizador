@@ -353,6 +353,38 @@
 </style>
 </head>
 <body>
+
+<!-- Vendor Preview Modal -->
+<div id="vendor-preview-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:600;align-items:flex-start;justify-content:center;overflow-y:auto;padding:32px 16px" onclick="if(event.target===this)closeVendorPreview()">
+  <div style="background:#fff;border-radius:12px;width:100%;max-width:860px;box-shadow:0 8px 40px rgba(0,0,0,.25);position:relative">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 20px;border-bottom:1px solid #e2e8f0;position:sticky;top:0;background:#fff;border-radius:12px 12px 0 0;z-index:1">
+      <span id="vendor-preview-title" style="font-weight:700;color:#1e293b;font-size:15px"></span>
+      <div style="display:flex;gap:8px">
+        <button id="vendor-preview-print-btn" class="btn btn-secondary" onclick="printVendorPreview()" style="display:none">🖨 Print</button>
+        <button onclick="closeVendorPreview()" style="background:#f1f5f9;border:none;border-radius:6px;padding:6px 12px;cursor:pointer;font-size:18px;color:#64748b;line-height:1">×</button>
+      </div>
+    </div>
+    <div id="vendor-preview-body" style="padding:24px 32px;min-height:200px;display:flex;align-items:center;justify-content:center;color:#94a3b8;font-size:13px">
+      Select a proforma to preview
+    </div>
+  </div>
+</div>
+
+<!-- Vendor Login Modal -->
+<div id="vendor-login" style="display:none;position:fixed;inset:0;background:#fff;z-index:9999;align-items:center;justify-content:center;flex-direction:column">
+  <div style="text-align:center;margin-bottom:32px">
+    <div style="font-size:28px;font-weight:900;color:#0f172a;letter-spacing:.02em">APHOLOS</div>
+    <div style="font-size:11px;color:#94a3b8;letter-spacing:.12em;text-transform:uppercase;margin-top:4px">Proforma Master</div>
+  </div>
+  <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:32px;width:320px;box-shadow:0 4px 16px rgba(0,0,0,.08)">
+    <div style="font-size:14px;font-weight:600;color:#0f172a;margin-bottom:20px">Enter your access code</div>
+    <input type="password" id="vendor-pwd" placeholder="Access code" style="width:100%;padding:10px 12px;border-radius:6px;border:1px solid #e2e8f0;background:#fff;color:#0f172a;font-size:14px;outline:none;margin-bottom:12px"
+      onkeydown="if(event.key==='Enter')checkVendorLogin()">
+    <div id="vendor-error" style="display:none;font-size:12px;color:#ef4444;margin-bottom:10px">Incorrect access code. Please try again.</div>
+    <button onclick="checkVendorLogin()" style="width:100%;background:#f97316;color:#fff;border:none;border-radius:6px;padding:10px;font-size:14px;font-weight:600;cursor:pointer">Access →</button>
+  </div>
+</div>
+
 <div id="app">
 
   <!-- Top Bar -->
@@ -363,6 +395,7 @@
     <div style="margin-left:auto;display:flex;gap:8px;align-items:center">
       <span id="pi-number-display" style="font-size:13px;font-weight:700;color:#f97316;min-width:100px;text-align:right"></span>
     </div>
+    <button onclick="logoutVendor()" style="margin-left:8px;background:#334155;border:none;border-radius:6px;padding:5px 12px;font-size:11px;font-weight:600;color:#e2e8f0;cursor:pointer">⇄ Change user</button>
   </div>
 
   <!-- Steps Bar -->
@@ -1266,33 +1299,97 @@ function logProforma(num) {
 }
 
 // ── Build PI Document ─────────────────────────────────────────────
+function _getPIParams() {
+  var e  = state.entity;
+  var ed = ENTITY_DATA[e];
+  var inco  = document.getElementById('f-incoterm').value;
+  var iplace = document.getElementById('f-incoplace').value === 'other'
+    ? document.getElementById('f-incoplace-custom').value
+    : document.getElementById('f-incoplace').value;
+  var terms = document.getElementById('f-terms').value === 'Other'
+    ? document.getElementById('f-terms-custom').value
+    : document.getElementById('f-terms').value;
+  return {
+    entity:   e,
+    piNumber: state.piNumber,
+    cart:     state.cart.map(function(c){ return { desc: c.desc, qty: c.qty, price: c.price }; }),
+    billto:   document.getElementById('f-billto').value,
+    shipto:   document.getElementById('f-shipto').value,
+    attn:     document.getElementById('f-attn').value,
+    brand:    document.getElementById('f-brand').value,
+    po:       document.getElementById('f-po').value,
+    etd:      document.getElementById('f-etd').value,
+    via:      document.getElementById('f-via').value,
+    shipterm: inco + ' ' + iplace,
+    terms:    terms,
+    agent:    document.getElementById('f-agent').value,
+    date:     document.getElementById('f-date').value,
+    custid:   document.getElementById('f-custid').value,
+    notes:    document.getElementById('f-notes').value,
+    currency: (ed.hasCurrency && document.getElementById('f-currency')) ? document.getElementById('f-currency').value : 'USD',
+    applyIVA: !!(ed.hasIVA && document.getElementById('f-iva') && document.getElementById('f-iva').value === 'yes')
+  };
+}
+
+function buildPIDocFromState(s) {
+  if (!s) return '<p style="color:#ef4444">No state data.</p>';
+  var f  = s.form  || {};
+  var e  = s.entity || 'APH';
+  var ed = ENTITY_DATA[e] || ENTITY_DATA['APH'];
+  var iplace = f.incoplace || '';
+  return _renderPIHtml({
+    entity:   e,
+    piNumber: s.piNumber || '',
+    cart:     (s.cart || []).map(function(c){ return { desc: c.desc||'', qty: c.qty||0, price: parseFloat(c.price)||0 }; }),
+    billto:   f.billto   || '',
+    shipto:   f.shiptosame ? (f.billto||'') : (f.shipto||''),
+    attn:     f.attn     || '',
+    brand:    f.brand    || '',
+    po:       f.po       || '',
+    etd:      f.etd      || '',
+    via:      f.via      || '',
+    shipterm: (f.incoterm||'') + (iplace ? ' '+iplace : ''),
+    terms:    f.terms    || '',
+    agent:    f.agent    || '',
+    date:     f.date     || '',
+    custid:   f.custid   || '',
+    notes:    f.notes    || '',
+    currency: f.currency || 'USD',
+    applyIVA: f.iva === 'yes'
+  });
+}
+
 function buildPIDoc() {
-  var e = state.entity;
+  document.getElementById('pi-doc').innerHTML = _renderPIHtml(_getPIParams());
+}
+
+function _renderPIHtml(p) {
+  var e  = p.entity;
   var ed = ENTITY_DATA[e];
   var hc = ed.headerColor;
   var isBRP = e === 'BRP';
   var isArg = e === 'ARG';
 
-  var billto = document.getElementById('f-billto').value;
-  var shipto = document.getElementById('f-shipto').value;
-  var attn   = document.getElementById('f-attn').value;
-  var brand  = document.getElementById('f-brand').value;
-  var po     = document.getElementById('f-po').value;
-  var etd    = document.getElementById('f-etd').value;
-  var via    = document.getElementById('f-via').value;
-  var inco   = document.getElementById('f-incoterm').value;
-  var place  = document.getElementById('f-incoplace').value === 'other' ? document.getElementById('f-incoplace-custom').value : document.getElementById('f-incoplace').value;
-  var shipterm = inco + ' ' + place;
-  var terms  = document.getElementById('f-terms').value === 'Other' ? document.getElementById('f-terms-custom').value : document.getElementById('f-terms').value;
-  var agent  = document.getElementById('f-agent').value;
-  var date   = document.getElementById('f-date').value;
-  var custid = document.getElementById('f-custid').value;
-  var notes  = document.getElementById('f-notes').value;
+  var billto   = p.billto;
+  var shipto   = p.shipto;
+  var attn     = p.attn;
+  var brand    = p.brand;
+  var po       = p.po;
+  var etd      = p.etd;
+  var via      = p.via;
+  var shipterm = p.shipterm;
+  var terms    = p.terms;
+  var agent    = p.agent;
+  var date     = p.date;
+  var custid   = p.custid;
+  var notes    = p.notes;
+  var currency = p.currency;
+  var applyIVA = p.applyIVA;
 
   // Items rows
   var maxRows = isArg ? 16 : 10;
   var itemRows = '';
-  state.cart.forEach(function(c, i) {
+  p.cart.forEach(function(c, i) {
     itemRows += '<tr>' +
       '<td class="num-col">' + (i+1<10?'0'+(i+1):''+(i+1)) + '</td>' +
       '<td>' + esc(c.desc) + '</td>' +
@@ -1302,19 +1399,17 @@ function buildPIDoc() {
     '</tr>';
   });
   // Filler rows
-  var fillerCount = Math.max(0, maxRows - state.cart.length);
-  for (var f = 0; f < fillerCount; f++) {
-    var n = state.cart.length + f + 1;
+  var fillerCount = Math.max(0, maxRows - p.cart.length);
+  for (var fi = 0; fi < fillerCount; fi++) {
+    var n = p.cart.length + fi + 1;
     itemRows += '<tr class="empty-row"><td class="num-col">' + (n<10?'0'+n:''+n) + '</td><td></td><td></td><td></td><td></td></tr>';
   }
 
-  // Currency & IVA (BRP only)
-  var currency = (ed.hasCurrency && document.getElementById('f-currency')) ? document.getElementById('f-currency').value : 'USD';
-  var applyIVA = (ed.hasIVA && document.getElementById('f-iva')) ? document.getElementById('f-iva').value === 'yes' : false;
+  // Currency & IVA
   var currSymbol = currency === 'MXN' ? '$' : 'U$D ';
 
   // Total
-  var total = state.cart.reduce(function(s,c){ return s + c.qty*c.price; }, 0);
+  var total = p.cart.reduce(function(sum,c){ return sum + c.qty*c.price; }, 0);
   var ivaAmount = applyIVA ? total * 0.16 : 0;
   var grandTotal = total + ivaAmount;
 
@@ -1356,7 +1451,7 @@ function buildPIDoc() {
       '<div class="pi-title-block">' +
         '<div class="pi-title">' + ed.title + '</div>' +
         '<table class="pi-num-box">' +
-          '<tr><td colspan="2" class="num-cell">' + state.piNumber + '</td></tr>' +
+          '<tr><td colspan="2" class="num-cell">' + p.piNumber + '</td></tr>' +
           '<tr><td>DATE:</td><td>' + esc(date) + '</td></tr>' +
           (custid ? '<tr><td>CUSTOMER ID:</td><td>' + esc(custid) + '</td></tr>' : '') +
         '</table>' +
@@ -1429,7 +1524,8 @@ function buildPIDoc() {
       '</div>' +
     '</div>';
 
-  document.getElementById('pi-doc').innerHTML = html;
+
+  return html;
 }
 
 // ── Preview ───────────────────────────────────────────────────────
@@ -1568,16 +1664,55 @@ function filterProformaList() {
   renderProformaList(filtered);
 }
 
+function parsePINumber(num) {
+  var m = (num || '').match(/^([A-Za-z]+)(\d+)(?:-V(\d+))?$/);
+  if (!m) return { base: num, ver: 0 };
+  return { base: m[1] + m[2], ver: parseInt(m[3] || '0', 10) };
+}
+
 function renderProformaList(list) {
   if (!list.length) {
     document.getElementById('proforma-list-tbody').innerHTML = '<tr><td colspan="6" style="padding:20px;text-align:center;color:#94a3b8">No proformas found.</td></tr>';
     return;
   }
-  var html = list.map(function(p) {
+  // Sort: by most recent date of each group desc, versions within group by ver desc
+  var sorted = list.slice().sort(function(a, b) {
+    var pa = parsePINumber(a.number), pb = parsePINumber(b.number);
+    if (pa.base === pb.base) return pb.ver - pa.ver; // same group: version desc
+    // different group: sort by the date of the base (version 0) or latest in group
+    var aDate = a.date || '', bDate = b.date || '';
+    if (bDate > aDate) return 1;
+    if (bDate < aDate) return -1;
+    return 0;
+  });
+  // For groups with no original, find best date per group
+  var groupDate = {};
+  sorted.forEach(function(p) {
+    var b = parsePINumber(p.number).base;
+    if (!groupDate[b] || (p.date || '') > groupDate[b]) groupDate[b] = p.date || '';
+  });
+  sorted.sort(function(a, b) {
+    var pa = parsePINumber(a.number), pb = parsePINumber(b.number);
+    if (pa.base === pb.base) return pb.ver - pa.ver;
+    var da = groupDate[pa.base] || '', db = groupDate[pb.base] || '';
+    if (db > da) return 1;
+    if (db < da) return -1;
+    return 0;
+  });
+  // Mark latest per base
+  var latestSeen = {};
+  sorted.forEach(function(p) {
+    var b = parsePINumber(p.number).base;
+    if (!latestSeen[b]) latestSeen[b] = p.number;
+  });
+  var html = sorted.map(function(p) {
     var canLoad = p.hasState;
+    var isLatest = latestSeen[parsePINumber(p.number).base] === p.number;
     var entityColor = p.entity === 'ARG' || p.entity === 'ASIA' ? '#f97316' : p.entity === 'LB' ? '#f97316' : p.entity === 'TR' ? '#ea580c' : '#dc2626';
-    return '<tr style="border-bottom:1px solid #f1f5f9;cursor:pointer" onmouseover="this.style.background=&apos;#fafbfc&apos;" onmouseout="this.style.background=&apos;&apos;">' +
-      '<td style="padding:7px 10px" title="Click to copy number" onclick="copyPINumber(&apos;' + esc(p.number) + '&apos;)"><strong style="color:' + entityColor + '">' + esc(p.number) + '</strong> <span style="font-size:9px;color:#cbd5e1">📋</span></td>' +
+    var latestBadge = isLatest ? '<span style="background:#f97316;color:#fff;font-size:9px;font-weight:700;padding:1px 6px;border-radius:10px;margin-left:6px;vertical-align:middle">LATEST</span>' : '';
+    var rowBg = isLatest ? '#fffbf7' : '';
+    return '<tr style="border-bottom:1px solid #f1f5f9;cursor:pointer;background:' + rowBg + '" onmouseover="this.style.background=&apos;#fafbfc&apos;" onmouseout="this.style.background=&apos;' + rowBg + '&apos;">' +
+      '<td style="padding:7px 10px" title="Click to copy number" onclick="copyPINumber(&apos;' + esc(p.number) + '&apos;)"><strong style="color:' + entityColor + '">' + esc(p.number) + '</strong>' + latestBadge + ' <span style="font-size:9px;color:#cbd5e1">📋</span></td>' +
       '<td style="padding:7px 10px;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + esc(p.client) + '</td>' +
       '<td style="padding:7px 10px;color:#64748b;white-space:nowrap">' + esc(p.date) + '</td>' +
       '<td style="padding:7px 10px;font-weight:600">$' + esc(p.total) + '</td>' +
@@ -1800,6 +1935,254 @@ function switchItemsTab(tab) {
   document.getElementById('items-tab-search').style.borderBottomColor = isSearch ? '#f97316' : 'transparent';
   document.getElementById('items-tab-cart').style.color = isSearch ? '#94a3b8' : '#f97316';
   document.getElementById('items-tab-cart').style.borderBottomColor = isSearch ? 'transparent' : '#f97316';
+}
+
+
+// ── Vendor login (proformas) ──────────────────────────────────────
+var VENDOR_PASSWORDS = {
+  'minorusso61': ['Mino Russo']
+};
+var REGION_PASSWORDS = {
+  'aphmasterna2026': ['Paty Fonseca', 'Diego Gneri', 'Shawn Chapman', 'Randy Chapin', 'Rui Bastos']
+};
+var MASTER_PASSWORD = 'aphmaestro2026';
+var SESSION_HOURS = 8;
+var _vendorAgents = null; // null = master, array = filtered
+
+function saveSession(pwd) {
+  var session = { pwd: pwd, exp: Date.now() + SESSION_HOURS * 60 * 60 * 1000 };
+  localStorage.setItem('apholos_pf_session', JSON.stringify(session));
+}
+
+function loadSession() {
+  try {
+    var s = JSON.parse(localStorage.getItem('apholos_pf_session'));
+    if (s && s.exp > Date.now()) return s.pwd;
+  } catch(e) {}
+  return null;
+}
+
+function applyLogin(pwd) {
+  var agentes = VENDOR_PASSWORDS[pwd] || REGION_PASSWORDS[pwd];
+  if (agentes) {
+    _vendorAgents = agentes.map(function(a){ return a.toLowerCase(); });
+  } else {
+    _vendorAgents = null; // master
+  }
+  document.getElementById('vendor-login').style.display = 'none';
+  // If vendor mode, hide create/edit UI and show readonly list
+  if (_vendorAgents) {
+    // Hide entity selection and steps — show only proforma list
+    document.getElementById('steps-bar').style.display = 'none';
+    document.getElementById('step-1').style.display = 'none';
+    document.getElementById('step-2').style.display = 'none';
+    document.getElementById('step-3').style.display = 'none';
+    document.getElementById('step-4').style.display = 'none';
+    // Show readonly proforma list
+    showVendorProformaList();
+  }
+}
+
+function checkVendorLogin() {
+  var pwd = document.getElementById('vendor-pwd').value.trim();
+  var agentes = VENDOR_PASSWORDS[pwd] || REGION_PASSWORDS[pwd];
+  if (agentes || pwd === MASTER_PASSWORD) {
+    saveSession(pwd);
+    applyLogin(pwd);
+  } else {
+    document.getElementById('vendor-error').style.display = 'block';
+    document.getElementById('vendor-pwd').value = '';
+    document.getElementById('vendor-pwd').focus();
+  }
+}
+
+function logoutVendor() {
+  localStorage.removeItem('apholos_pf_session');
+  location.reload();
+}
+
+function showVendorProformaList() {
+  // Create a readonly view
+  var app = document.getElementById('app');
+  var wrap = document.createElement('div');
+  wrap.id = 'vendor-pf-wrap';
+  wrap.style.cssText = 'max-width:900px;margin:32px auto;padding:0 16px';
+  wrap.innerHTML = '<div style="font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#94a3b8;margin-bottom:14px">Your Proformas</div>' +
+    '<div style="background:#fff;border:1px solid #e2e8f0;border-radius:12px;overflow:hidden">' +
+      '<div style="background:#334155;padding:12px 20px"><span style="font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#e2e8f0">Proforma List</span></div>' +
+      '<div id="vendor-pf-list" style="padding:24px;text-align:center;color:#94a3b8"><div class="spinner" style="margin:0 auto 12px"></div>Loading...</div>' +
+    '</div>';
+  app.appendChild(wrap);
+
+  jsonp(GAS_URL + '?action=getProformas&t=' + Date.now(), function(err, data) {
+    var el = document.getElementById('vendor-pf-list');
+    if (err || !data || !data.proformas) { el.innerHTML = 'Could not load proformas.'; return; }
+    var list = data.proformas.filter(function(p) {
+      return _vendorAgents.indexOf((p.agent||'').toLowerCase()) >= 0;
+    });
+    if (!list.length) { el.innerHTML = 'No proformas found.'; return; }
+    // Sort by most recent group date desc, versions within group desc
+    var groupDate = {};
+    list.forEach(function(p) {
+      var b = parsePINumber(p.number).base;
+      if (!groupDate[b] || (p.date||'') > groupDate[b]) groupDate[b] = p.date||'';
+    });
+    list.sort(function(a, b) {
+      var pa = parsePINumber(a.number), pb = parsePINumber(b.number);
+      if (pa.base === pb.base) return pb.ver - pa.ver;
+      var da = groupDate[pa.base]||'', db = groupDate[pb.base]||'';
+      if (db > da) return 1;
+      if (db < da) return -1;
+      return 0;
+    });
+    var latestSeen = {};
+    list.forEach(function(p) { var b = parsePINumber(p.number).base; if (!latestSeen[b]) latestSeen[b] = p.number; });
+    _vendorPfList = list;
+
+    window.renderVendorRows = function(rows) {
+      var h = '';
+      rows.forEach(function(p, vi) {
+        var isLatest = latestSeen[parsePINumber(p.number).base] === p.number;
+        var latestBadge = isLatest ? '<span style="background:#f97316;color:#fff;font-size:9px;font-weight:700;padding:1px 6px;border-radius:10px;margin-left:6px;vertical-align:middle">LATEST</span>' : '';
+        var realIdx = _vendorPfList.indexOf(p);
+        h += '<div style="display:grid;grid-template-columns:1.4fr 1.5fr 100px 100px 80px 60px;gap:8px;padding:10px 12px;font-size:13px;border-bottom:1px solid #f8fafc;align-items:center;background:' + (isLatest ? '#fffbf7' : '#fff') + '">' +
+          '<div style="font-weight:700;color:#f97316">' + esc(p.number) + latestBadge + '</div>' +
+          '<div style="color:#334155">' + esc(p.client) + '</div>' +
+          '<div style="color:#94a3b8;font-size:12px">' + esc(p.date) + '</div>' +
+          '<div style="font-weight:600">$' + esc(p.total) + '</div>' +
+          '<div><span style="background:' + (p.status==='PENDING'?'#fef3c7':'#d1fae5') + ';color:' + (p.status==='PENDING'?'#92400e':'#065f46') + ';padding:2px 8px;border-radius:20px;font-size:11px;font-weight:600">' + esc(p.status) + '</span></div>' +
+          '<div>' + (p.hasState ? '<button onclick="vendorPreview(' + realIdx + ')" style="background:#f1f5f9;border:1px solid #e2e8f0;border-radius:6px;padding:4px 10px;font-size:12px;cursor:pointer">👁</button>' : '') + '</div>' +
+        '</div>';
+      });
+      return h;
+    }
+
+    var html = '<div style="padding:12px 12px 8px">' +
+      '<input id="vendor-search" type="text" placeholder="Filter by client, number, brand…" ' +
+      'style="width:100%;box-sizing:border-box;padding:8px 12px;border:1px solid #e2e8f0;border-radius:6px;font-size:13px;outline:none" ' +
+      'oninput="filterVendorList(this.value)">' +
+    '</div>' +
+    '<div style="display:grid;grid-template-columns:1.4fr 1.5fr 100px 100px 80px 60px;gap:8px;padding:8px 12px;font-size:11px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:.04em;border-bottom:1px solid #f1f5f9">' +
+      '<div>Number</div><div>Client</div><div>Date</div><div>Total</div><div>Status</div><div></div></div>' +
+    '<div id="vendor-rows">' + renderVendorRows(list) + '</div>';
+
+    el.innerHTML = html;
+    el.style.padding = '0';
+    el.style.textAlign = 'left';
+  });
+}
+
+function filterVendorList(q) {
+  q = (q || '').toLowerCase().trim();
+  var rows = q
+    ? _vendorPfList.filter(function(p) {
+        return (p.number + ' ' + p.client + ' ' + (p.brand || '')).toLowerCase().indexOf(q) >= 0;
+      })
+    : _vendorPfList;
+  var el = document.getElementById('vendor-rows');
+  if (!el) return;
+  el.innerHTML = rows.length ? window.renderVendorRows(rows) : '<div style="padding:20px;text-align:center;color:#94a3b8">No results.</div>';
+}
+
+// Show login on load
+document.addEventListener('DOMContentLoaded', function() {
+  var saved = loadSession();
+  if (saved) {
+    applyLogin(saved);
+  } else {
+    var loginEl = document.getElementById('vendor-login');
+    loginEl.style.display = 'flex';
+    setTimeout(function(){ document.getElementById('vendor-pwd').focus(); }, 100);
+  }
+});
+
+
+var _vendorPfList = [];
+
+function vendorPreview(idx) {
+  var p = _vendorPfList[idx];
+  if (!p || !p.hasState) return;
+  var modal = document.getElementById('vendor-preview-modal');
+  var body  = document.getElementById('vendor-preview-body');
+  var title = document.getElementById('vendor-preview-title');
+  var printBtn = document.getElementById('vendor-preview-print-btn');
+  title.textContent = p.number + ' — ' + p.client;
+  printBtn.style.display = 'none';
+  body.innerHTML = '<div style="padding:40px;text-align:center"><div class="spinner" style="margin:0 auto 12px"></div><p>Loading…</p></div>';
+  body.style.display = 'block';
+  modal.style.display = 'flex';
+  _listPreviewDocHtml = '';
+
+  jsonp(GAS_URL + '?action=loadState&number=' + encodeURIComponent(p.number) + '&t=' + Date.now(), function(err, data) {
+    if (err || !data || !data.ok) {
+      body.innerHTML = '<div style="padding:40px;text-align:center;color:#ef4444">Could not load proforma.</div>';
+      return;
+    }
+    data.state.piNumber = p.number;
+    var docHtml = buildPIDocFromState(data.state);
+    _listPreviewDocHtml = docHtml;
+    body.innerHTML = '<div style="padding:8px 0">' + docHtml + '</div>';
+    printBtn.style.display = '';
+  });
+}
+
+function closeVendorPreview() {
+  document.getElementById('vendor-preview-modal').style.display = 'none';
+  _listPreviewDocHtml = '';
+}
+
+function printVendorPreview() {
+  if (!_listPreviewDocHtml) return;
+  var printWindow = window.open('', '_blank');
+  printWindow.document.write('<!DOCTYPE html><html><head>' +
+    '<meta charset="UTF-8">' +
+    '<title>Proforma</title>' +
+    '<style>' +
+      '* { box-sizing: border-box; margin: 0; padding: 0; }' +
+      'body { font-family: "Segoe UI", Arial, sans-serif; font-size: 11px; color: #000; background: #fff; padding: 20px 28px; }' +
+      'img { max-width: 100%; }' +
+      '.pi-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 18px; }' +
+      '.pi-logo img { height: 44px; object-fit: contain; margin-bottom: 5px; display: block; }' +
+      '.pi-sender { font-size: 9.5px; line-height: 1.6; color: #334155; white-space: pre-line; }' +
+      '.pi-title-block { text-align: right; }' +
+      '.pi-title { font-size: 17px; font-weight: 700; margin-bottom: 8px; }' +
+      '.pi-num-box { border: 1px solid #000; border-collapse: collapse; font-size: 10px; min-width: 220px; }' +
+      '.pi-num-box td { padding: 4px 8px; border: 1px solid #000; }' +
+      '.pi-num-box .num-cell { background: #e8e8e8; font-weight: 700; font-size: 14px; text-align: center; }' +
+      '.pi-billship { display: flex; gap: 32px; margin-bottom: 14px; font-size: 10px; }' +
+      '.pi-billship > div { flex: 1; }' +
+      '.pi-billship pre { white-space: pre-wrap; font-family: inherit; font-size: 10px; line-height: 1.5; }' +
+      '.pi-attn-row { display: flex; gap: 32px; margin-bottom: 12px; font-size: 10px; }' +
+      '.pi-info-table { width: 100%; border-collapse: collapse; font-size: 10px; margin-bottom: 14px; }' +
+      '.pi-info-table th { padding: 5px 8px; text-align: left; border: 1px solid #aaa; color: #fff; }' +
+      '.pi-info-table td { padding: 5px 8px; border: 1px solid #aaa; }' +
+      '.pi-items-table { width: 100%; border-collapse: collapse; font-size: 10px; margin-bottom: 14px; }' +
+      '.pi-items-table th { padding: 5px 8px; text-align: left; border: 1px solid #aaa; color: #fff; }' +
+      '.pi-items-table td { padding: 5px 8px; border: 1px solid #aaa; vertical-align: top; }' +
+      '.num-col { width: 28px; text-align: center; }' +
+      '.qty-col { width: 60px; text-align: center; }' +
+      '.up-col { width: 70px; text-align: right; }' +
+      '.tot-col { width: 70px; text-align: right; }' +
+      '.pi-totals { text-align: right; font-size: 10px; margin-bottom: 14px; }' +
+      '.pi-totals table { margin-left: auto; border-collapse: collapse; }' +
+      '.pi-totals td { padding: 3px 8px; }' +
+      '.pi-totals .grand { font-weight: 700; font-size: 12px; border-top: 1px solid #000; }' +
+      '.pi-payment { font-size: 9.5px; line-height: 1.6; margin-bottom: 12px; padding: 10px; background: #f8fafc; border-radius: 5px; white-space: pre-line; }' +
+      '.pi-tc { font-size: 9px; line-height: 1.5; color: #475569; margin-bottom: 12px; }' +
+      '.pi-tc ol { padding-left: 16px; }' +
+      '.pi-tc p { margin: 0; }' +
+      '.pi-footnote { font-size: 9px; font-weight: 700; margin-top: 8px; }' +
+      '* { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; color-adjust: exact !important; }' +
+      '@media print {' +
+        '@page { size: A4 portrait; margin: 10mm 12mm; }' +
+        'body { padding: 0; }' +
+      '}' +
+    '</style>' +
+    '</head><body>' +
+    _listPreviewDocHtml +
+    '<script>window.onload = function(){ window.print(); }<\/script>' +
+    '</body></html>');
+  printWindow.document.close();
 }
 
 </script>
