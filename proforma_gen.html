@@ -378,8 +378,11 @@
   </div>
   <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:32px;width:320px;box-shadow:0 4px 16px rgba(0,0,0,.08)">
     <div style="font-size:14px;font-weight:600;color:#0f172a;margin-bottom:20px">Enter your access code</div>
-    <input type="password" id="vendor-pwd" placeholder="Access code" style="width:100%;padding:10px 12px;border-radius:6px;border:1px solid #e2e8f0;background:#fff;color:#0f172a;font-size:14px;outline:none;margin-bottom:12px"
-      onkeydown="if(event.key==='Enter')checkVendorLogin()">
+    <div style="position:relative;margin-bottom:12px">
+      <input type="password" id="vendor-pwd" placeholder="Access code" style="width:100%;box-sizing:border-box;padding:10px 40px 10px 12px;border-radius:6px;border:1px solid #e2e8f0;background:#fff;color:#0f172a;font-size:14px;outline:none"
+        onkeydown="if(event.key==='Enter')checkVendorLogin()">
+      <button type="button" onclick="(function(){var i=document.getElementById('vendor-pwd');i.type=i.type==='password'?'text':'password';this.textContent=i.type==='password'?'👁':'🙈'}).call(this)" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;font-size:16px;line-height:1;padding:0;color:#94a3b8">👁</button>
+    </div>
     <div id="vendor-error" style="display:none;font-size:12px;color:#ef4444;margin-bottom:10px">Incorrect access code. Please try again.</div>
     <button onclick="checkVendorLogin()" style="width:100%;background:#f97316;color:#fff;border:none;border-radius:6px;padding:10px;font-size:14px;font-weight:600;cursor:pointer">Access →</button>
   </div>
