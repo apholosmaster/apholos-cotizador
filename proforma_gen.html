@@ -736,13 +736,14 @@
           <button onclick="if(state.piNumber && state.piNumber.indexOf('XXXXX')<0){closePreview();showNewPIOverlay();}else{closePreview();goStep(1);loadProformaList();}" style="padding:5px 10px;border-radius:5px;font-size:11px;font-weight:600;cursor:pointer;border:none;background:#64748b;color:#fff">🏢 Entity</button>
           <button onclick="closePreview();goStep(2);switchItemsTab('search');" style="padding:5px 10px;border-radius:5px;font-size:11px;font-weight:600;cursor:pointer;border:none;background:#475569;color:#fff">✏️ Items</button>
           <button onclick="closePreview();goStep(3);" style="padding:5px 10px;border-radius:5px;font-size:11px;font-weight:600;cursor:pointer;border:none;background:#334155;color:#fff">← Details</button>
-          <button onclick="closePreview();generateProforma();" style="padding:5px 12px;border-radius:5px;font-size:11px;font-weight:600;cursor:pointer;border:none;background:#22c55e;color:#fff">✓ Confirm</button>
+          <button onclick="closePreview();generateProforma('same');" id="btn-confirm-same" style="display:none;padding:5px 12px;border-radius:5px;font-size:11px;font-weight:600;cursor:pointer;border:none;background:#f97316;color:#fff">✓ Update existing</button>
+          <button onclick="closePreview();generateProforma('new');" id="btn-confirm-new" style="padding:5px 12px;border-radius:5px;font-size:11px;font-weight:600;cursor:pointer;border:none;background:#22c55e;color:#fff">✓ Confirm as new version</button>
         </div>
         <div id="load-preview-bar" style="display:none;gap:8px;align-items:center;margin-right:12px">
           <span style="font-size:12px;color:#94a3b8">Loaded proforma — edit or confirm</span>
           <button onclick="closePreview();goStep(2);switchItemsTab('search');" style="padding:6px 14px;border-radius:5px;font-size:12px;font-weight:600;cursor:pointer;border:none;background:#334155;color:#fff">✏️ Edit Items</button>
           <button onclick="closePreview();goStep(3);" style="padding:6px 14px;border-radius:5px;font-size:12px;font-weight:600;cursor:pointer;border:none;background:#475569;color:#fff">📋 Edit Details</button>
-          <button onclick="closePreview();goStep(3);" style="padding:6px 14px;border-radius:5px;font-size:12px;font-weight:600;cursor:pointer;border:none;background:#22c55e;color:#fff">✓ Confirm → Details</button>
+          <button onclick="closePreview();goStep(3);" style="padding:6px 14px;border-radius:5px;font-size:12px;font-weight:600;cursor:pointer;border:none;background:#22c55e;color:#fff">✓ Continue to Details</button>
         </div>
         <button class="btn-print" onclick="if(state.piNumber && state.piNumber.indexOf('XXXXX')>=0){toast('Confirm the proforma first before printing.');}else{closePreview();printAndSave();}">🖨 Print / PDF</button>
         <button class="btn-close-preview" onclick="closePreview()">✕ Close</button>
@@ -796,7 +797,7 @@ var ENTITY_DATA = {
     name: 'APHOLOS ASIA Limited',
     addr: 'APHOLOS ASIA Limited\nAddress: A2, 9/F, Phase 1, Goldfield Ind Bldg,\n144-150 Tai Lin Pai Road, Kwai Chung, Hong Kong.\nPhone: (+86) 135 3764 8065 | email: Candy@apholos.com',
     prefix: 'AS',
-    headerColor: '#1a3450',
+    headerColor: '#2d6a4f',
     title: 'PRO-FORMA INVOICE',
     payment: 'Please make payments payable to:\nAPHOLOS ASIA LIMITED\nBANK: CITIBANK N.A. Hong Kong\nACCOUNT NAME: APHOLOS ASIA LIMITED\nBANK ADDRESS: 50/F, Champion Tower, 3 Garden Road, Central - Bank City: Hong Kong\nBASE NUMBER: 085881 - BANK CODE: 006 - BRANCH CODE: 391 - SWIFT: CITIHKHXXXX\nACCOUNT #: 1085881007 / ACCOUNT #: 40858812 (If transfering from a Citibank account).',
     footnote: '',
@@ -918,7 +919,7 @@ function loadItems() {
   state.allItems = (DATA.items || []).map(function(item) {
     if (!item.prices || typeof item.prices !== 'object') item.prices = {};
     return item;
-  });
+  }).reverse();
   renderItemsTable();
 
   // Then append ALL Sheet items
@@ -927,7 +928,7 @@ function loadItems() {
     data.items.forEach(function(it) {
       if (!it.prices || typeof it.prices !== 'object') it.prices = {};
       normalizeItemImg(it);
-      state.allItems.push(it);
+      state.allItems.unshift(it);
     });
     renderItemsTable();
   });
@@ -999,7 +1000,7 @@ function addToCart(itemIdx) {
   if (it.codigo && it.codigo !== '—') descParts.push(it.codigo);
   if (it.design_no && it.design_no !== '—' && it.design_no !== it.codigo) descParts.push(it.design_no);
   if (it.cuno && it.cuno !== '—') descParts.push('Cuño: ' + it.cuno);
-  state.cart.push({ item: it, qty: defQty, price: defPrice, desc: descParts.filter(Boolean).join(', '), availableQtys: qtys });
+  state.cart.unshift({ item: it, qty: defQty, price: defPrice, desc: descParts.filter(Boolean).join(', '), availableQtys: qtys });
   renderCart();
   renderItemsTable();
   updateSummary();
@@ -1045,7 +1046,7 @@ function addMoldFromPrompt() {
 }
 
 function addMoldToCart(desc, price) {
-  state.cart.push({ item: null, qty: 1, price: price, desc: desc || 'Mold cost', availableQtys: [] });
+  state.cart.unshift({ item: null, qty: 1, price: price, desc: desc || 'Mold cost', availableQtys: [] });
   renderCart();
   updateSummary();
 }
@@ -1275,6 +1276,9 @@ function previewBeforeGenerate() {
   document.getElementById('confirm-preview-bar').style.display = '';
   document.getElementById('load-preview-bar').style.display = 'none';
   document.getElementById('preview-pi-num').textContent = 'Preview — not yet confirmed';
+  // Show/hide version buttons based on whether this is a loaded proforma
+  document.getElementById('btn-confirm-new').textContent = state.loadedFrom ? '✓ Confirm as new version' : '✓ Confirm';
+  document.getElementById('btn-confirm-same').style.display = state.loadedFrom ? 'inline-block' : 'none';
   document.getElementById('pi-preview-wrap').classList.add('open');
 }
 function stepBack() { goStep(state.step - 1); }
@@ -1313,27 +1317,34 @@ function getNextVersion(num) {
   return match ? parseInt(match[1]) + 1 : 2;
 }
 
-function generateProforma() {
+function generateProforma(mode) {
   if (!state.entity) { toast('Select an entity first.'); return; }
   if (!state.cart.length) { toast('Add at least one item.'); return; }
   showLoading('Getting proforma number…');
 
-  // If loaded from existing proforma, generate V2/V3 suffix instead of new number
+  // If loaded from existing proforma
   if (state.loadedFrom) {
-    var base = state.loadedFrom.replace(/-V\d+$/, ''); // strip existing version
-    var newNum = base + '-V' + (getNextVersion(state.loadedFrom));
-    state.piNumber = newNum;
-    document.getElementById('pi-number-display').textContent = newNum;
-    document.getElementById('banner-pi-num').textContent = newNum;
+    var num;
+    if (mode === 'same') {
+      // Overwrite — keep same number
+      num = state.loadedFrom;
+    } else {
+      // New version
+      var base = state.loadedFrom.replace(/-V\d+$/, '');
+      num = base + '-V' + (getNextVersion(state.loadedFrom));
+    }
+    state.piNumber = num;
+    document.getElementById('pi-number-display').textContent = num;
+    document.getElementById('banner-pi-num').textContent = num;
     document.getElementById('active-pi-banner').style.display = 'flex';
-    document.getElementById('step4-pi-num').textContent = newNum;
-    document.getElementById('preview-pi-num').textContent = newNum;
+    document.getElementById('step4-pi-num').textContent = num;
+    document.getElementById('preview-pi-num').textContent = num;
     hideLoading();
-    logProforma(newNum);
-    setTimeout(function(){ saveProformaState(newNum); }, 4000);
+    logProforma(num);
+    setTimeout(function(){ saveProformaState(num); }, 4000);
     buildPIDoc();
     goStep(4);
-    toast('Proforma ' + newNum + ' generated!');
+    toast('Proforma ' + num + (mode === 'same' ? ' updated!' : ' generated!'));
     return;
   }
 
@@ -1680,7 +1691,7 @@ function printAndSave() {
     '</style>' +
     '</head><body>' +
     docHtml +
-    '<script>window.onload = function(){ window.print(); }<\/script>' +
+    '<script>window.onload = function(){ window.print(); }; window.onafterprint = function(){ window.close(); };<\/script>' +
     '</body></html>');
   printWindow.document.close();
 }
@@ -2283,7 +2294,7 @@ function printVendorPreview() {
     '</style>' +
     '</head><body>' +
     _listPreviewDocHtml +
-    '<script>window.onload = function(){ window.print(); }<\/script>' +
+    '<script>window.onload = function(){ window.print(); }; window.onafterprint = function(){ window.close(); };<\/script>' +
     '</body></html>');
   printWindow.document.close();
 }
