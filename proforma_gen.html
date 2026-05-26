@@ -1068,6 +1068,7 @@ function renderCart() {
     wrap.querySelectorAll('.cart-row').forEach(function(r){ r.remove(); });
     document.getElementById('cart-count').textContent = '';
     document.getElementById('btn-clear-cart').style.display = 'none';
+    document.getElementById('cart-grand-total').textContent = '$0.00';
     return;
   }
   empty.style.display = 'none';
@@ -1729,6 +1730,22 @@ function newProforma() {
   document.getElementById('f-po').value = '';
   document.getElementById('f-notes').value = '';
   document.getElementById('f-client-search').value = '';
+  document.getElementById('f-etd').value = '';
+  document.getElementById('f-via').value = '';
+  document.getElementById('f-incoterm').value = 'FCA';
+  document.getElementById('f-incoplace').value = 'MIAMI';
+  document.getElementById('f-incoplace-custom').value = '';
+  document.getElementById('f-incoplace-custom-wrap').style.display = 'none';
+  document.getElementById('f-terms').value = '50% w/Order - 50% w/Shipment';
+  document.getElementById('f-terms-custom').value = '';
+  document.getElementById('f-terms-custom').style.display = 'none';
+  document.getElementById('f-custid').value = '';
+  var agSel = document.getElementById('f-agent');
+  if (agSel) agSel.selectedIndex = 0;
+  document.getElementById('f-date').value = new Date().toLocaleDateString('en-US', {month:'short', day:'numeric', year:'numeric'});
+  document.getElementById('f-shipto-same').checked = false;
+  document.getElementById('f-shipto').disabled = false;
+  renderCart();
   updateSummary();
   goStep(1);
   loadProformaList();
@@ -1863,7 +1880,8 @@ function saveProformaState(num) {
     entity: state.entity,
     cart: state.cart.map(function(c) {
       return {
-        itemIdx: state.allItems.indexOf(c.item),
+        itemIdx: c.item === null ? -1 : state.allItems.indexOf(c.item),
+        isMold: c.item === null,
         qty: c.qty,
         price: c.price,
         desc: c.desc
@@ -1914,6 +1932,10 @@ function loadExistingProforma() {
     function restoreCart() {
       state.cart = [];
       (s.cart || []).forEach(function(c) {
+        if (c.isMold || c.itemIdx === -1) {
+          state.cart.push({ item: null, qty: c.qty || 1, price: c.price, desc: c.desc || 'Mold cost', availableQtys: [] });
+          return;
+        }
         var it = state.allItems[c.itemIdx];
         if (!it) return;
         var qtys = Object.keys(it.prices || {}).filter(function(q){ return parseFloat(it.prices[q]) > 0; });
