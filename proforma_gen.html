@@ -1195,7 +1195,8 @@ document.addEventListener('change', function(e){
 function selectEntity(e) {
   state.entity = e;
   document.querySelectorAll('.entity-card').forEach(function(el){ el.classList.remove('selected'); });
-  document.getElementById('ec-' + e).classList.add('selected');
+  var ecEl = document.getElementById('ec-' + e);
+  if (ecEl) ecEl.classList.add('selected');
   document.getElementById('btn-next').disabled = false;
   // Set incoplace default
   var ip = document.getElementById('f-incoplace');
