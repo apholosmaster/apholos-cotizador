@@ -1388,7 +1388,8 @@ function logProforma(num) {
     terms: document.getElementById('f-terms').value === 'Other' ? document.getElementById('f-terms-custom').value : document.getElementById('f-terms').value,
     brand: document.getElementById('f-brand').value,
     shipto: document.getElementById('f-shipto').value.split('\n')[0] || '',
-    custid: document.getElementById('f-custid').value
+    custid: document.getElementById('f-custid').value,
+    originalDate: state.loadedFrom ? document.getElementById('f-date').value : ''
   };
   var qs = Object.keys(params).map(function(k){ return k + '=' + encodeURIComponent(params[k]); }).join('&');
   var cbName = '__log_' + Date.now();
@@ -2007,7 +2008,7 @@ function loadExistingProforma() {
       var agOpt = Array.from(agSel.options).find(function(o){ return o.value === f.agent; });
       if (agOpt) agSel.value = f.agent;
     }
-    document.getElementById('f-date').value = new Date().toLocaleDateString('en-US', {month:'short', day:'numeric', year:'numeric'});
+    document.getElementById('f-date').value = f.date || new Date().toLocaleDateString('en-US', {month:'short', day:'numeric', year:'numeric'});
     state.piNumber = s.piNumber || num;  // show real number in preview
     document.getElementById('pi-number-display').textContent = s.piNumber || num;
     document.getElementById('banner-pi-num').textContent = s.piNumber || num;
