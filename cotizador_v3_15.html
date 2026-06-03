@@ -515,6 +515,11 @@ td.img-cell { width: 60px; padding: 4px 8px; text-align: center; vertical-align:
     </div>
 
     <div class="fg">
+      <label class="fg-label"><span>Marca / Cliente</span></label>
+      <input type="text" id="f-brand" placeholder="Ej: MYDFLOWER, BONOLLO…" oninput="applyFilters()">
+    </div>
+
+    <div class="fg">
       <label class="fg-label"><span data-i18n="tipo">Tipo de producto</span></label>
       <select id="f-tipo" onchange="updateMaterials();applyFilters()">
         <option value="">— Todos —</option>
@@ -935,6 +940,7 @@ function applyFilters() {
   var tipo     = document.getElementById('f-tipo').value;
   var med      = document.getElementById('f-med').value;
   var origen   = document.getElementById('f-origen').value;
+  var brandFilter = document.getElementById('f-brand') ? document.getElementById('f-brand').value.toLowerCase().trim() : '';
   var selMats  = getChecked('mat-list');
   var selCork  = getChecked('cork-list');
   var selAg    = getChecked('ag-list');
@@ -951,6 +957,9 @@ function applyFilters() {
 
     // ORIGEN — single select
     if (origen && item.origen !== origen) return false;
+
+    // MARCA / CLIENTE — text search
+    if (brandFilter && (item.cliente || '').toLowerCase().indexOf(brandFilter) < 0 && (item.brand || '').toLowerCase().indexOf(brandFilter) < 0) return false;
 
     // MATERIAL — multi checkbox: if any checked, item must match one of them (OR)
     if (selMats.length > 0) {
@@ -1098,6 +1107,7 @@ function resetFilters() {
   document.getElementById('f-tipo').value   = '';
   document.getElementById('f-med').value    = '';
   document.getElementById('f-origen').value = '';
+  if (document.getElementById('f-brand')) document.getElementById('f-brand').value = '';
   document.querySelectorAll('#cork-list input, #ag-list input').forEach(function(c) { c.checked = false; });
   document.getElementById('f-price-min').value = '';
   document.getElementById('f-price-max').value = '';
@@ -1587,7 +1597,7 @@ function openQuoteModal() {
   }
 
   // Page header (repeated on each page)
-  function buildPageHeader(clientVal, agentVal, dateVal, incotermVal, originVal) {
+  function buildPageHeader(clientVal, agentVal, dateVal, incotermVal, originVal, brandVal) {
     return '<div class="quote-header-bar print-header">' +
       '<img src="'+(isLB?LOGO_LB_B64:isTR?LOGO_TR_B64:isBRP?LOGO_BRP_B64:LOGO_B64)+'" alt="logo" style="height:36px;'+(isLB||isTR||isBRP?'':'filter:invert(1)')+'">' +
       '<div class="co-title">commercial offer</div>' +
@@ -1598,6 +1608,7 @@ function openQuoteModal() {
       '<div class="quote-meta-field"><label>' + (LANG==='en'?'Date':'Fecha') + '</label><div style="font-size:12px;padding:2px 0">' + (dateVal||'') + '</div></div>' +
       '<div class="quote-meta-field"><label>Incoterm</label><div style="font-size:12px;padding:2px 0">' + (incotermVal||'') + '</div></div>' +
       (originVal ? '<div class="quote-meta-field"><label>' + (LANG==='en'?'Origin':'Origen') + '</label><div style="font-size:12px;padding:2px 0">' + originVal + '</div></div>' : '') +
+      (brandVal ? '<div class="quote-meta-field"><label>' + (LANG==='en'?'Brand':'Marca') + '</label><div style="font-size:12px;padding:2px 0">' + brandVal + '</div></div>' : '') +
     '</div>';
   }
 
@@ -1653,6 +1664,7 @@ function openQuoteModal() {
       '</div>' +
       '<div class="quote-meta" style="background:white">' +
         '<div class="quote-meta-field"><label>' + (LANG==='en'?'Client':'Cliente') + '</label><input id="q-client" type="text" ' + (LANG==='en'?'placeholder="Client name"':'placeholder="Nombre del cliente"') + '></div>' +
+        '<div class="quote-meta-field"><label>' + (LANG==='en'?'Brand':'Marca') + '</label><input id="q-brand" type="text" placeholder="e.g. MYDFLOWER"></div>' +
         '<div class="quote-meta-field"><label>' + (LANG==='en'?'Agent':'Agente') + '</label><select id="q-agent">' + agentOpts + '</select></div>' +
         '<div class="quote-meta-field"><label>' + (LANG==='en'?'Date':'Fecha') + '</label><input id="q-date" type="text" value="' + new Date().toLocaleDateString('en-GB', {day:'2-digit',month:'long',year:'numeric'}) + '"></div>' +
         '<div class="quote-meta-field"><label>Incoterm</label><select id="q-incoterm"><option value="">—</option><option>FCA</option><option>DAP</option><option>DDP</option><option>CIF</option><option>EXW</option><option>TBA</option></select></div>' +
@@ -1766,6 +1778,7 @@ function prepareAndPrint() {
   var date      = document.getElementById('q-date').value;
   var incoterm  = document.getElementById('q-incoterm').value;
   var origin    = document.getElementById('q-origin').value;
+  var brand     = document.getElementById('q-brand') ? document.getElementById('q-brand').value : '';
 
   // Get all editable values from current form
   var rows = document.querySelectorAll('#quote-tbody tr[data-item-row]');
@@ -1898,6 +1911,7 @@ function prepareAndPrint() {
         (LANG==='en'?'<span><strong>Date:</strong> ':'<span><strong>Fecha:</strong> ') + date + '</span>' +
         '<span><strong>Incoterm:</strong> ' + incoterm + '</span>' +
         (origin ? (LANG==='en'?'<span><strong>Origin:</strong> ':'<span><strong>Origen:</strong> ') + origin + '</span>' : '') +
+        (document.getElementById('q-brand') && document.getElementById('q-brand').value ? (LANG==='en'?'<span><strong>Brand:</strong> ':'<span><strong>Marca:</strong> ') + document.getElementById('q-brand').value + '</span>' : '') +
       '</div>' +
       // Table
       '<table class="ph-table">' +
