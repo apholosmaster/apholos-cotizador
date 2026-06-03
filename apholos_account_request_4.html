@@ -426,6 +426,10 @@ function startForm() {
 function v(id) { return (document.getElementById(id)||{}).value||''; }
 
 function submitForm() {
+  var submitBtn = document.getElementById('submit-btn');
+  if (submitBtn.disabled) return;
+  submitBtn.disabled = true;
+  submitBtn.textContent = currentLang === 'es' ? 'Enviando...' : 'Sending...';
   var required = ['company','address','city','state','zip','country','phone','email_orders',
     'market','brands','activity','tax_id','ship_to','ship_city','ship_country','ship_zip',
     'contact_resp','contact_resp_email','contact_resp_ph'];
@@ -433,6 +437,8 @@ function submitForm() {
   if (missing.length) {
     alert(currentLang === 'es' ? 'Por favor completá todos los campos obligatorios (*).' : 'Please fill in all required fields (*).');
     document.getElementById(missing[0]).focus();
+    submitBtn.disabled = false;
+    submitBtn.textContent = currentLang === 'es' ? 'Enviar solicitud →' : 'Submit request →';
     return;
   }
   var params = {
