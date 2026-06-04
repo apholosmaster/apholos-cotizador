@@ -114,7 +114,7 @@
 
   <!-- General Data -->
   <div class="section">
-    <div class="section-header"><span id="s1-title">General Data</span></div>
+    <div class="section-header"><span id="s1-title">General Data</span><span style="color:#94a3b8;margin:0 10px;">/</span><span id="s1-billtitle" style="color:#f97316;">Bill To</span></div>
     <div class="section-body">
       <div class="grid" style="margin-bottom:14px">
         <div class="field"><label id="l-company">Company legal name <span class="req">*</span></label><input type="text" id="company" required></div>
@@ -180,15 +180,18 @@
 
   <!-- Tax Data -->
   <div class="section">
-    <div class="section-header"><span id="s3-title">Tax Data</span></div>
+    <div class="section-header" style="display:flex;align-items:center;gap:14px;"><span id="s3-title">Tax Data</span><span id="s3-note" style="color:#f97316;font-size:11px;font-weight:600;">* At least one field required</span></div>
     <div class="section-body">
       <div class="grid grid-2">
         <div class="field"><label>EORI #</label><input type="text" id="eori"></div>
         <div class="field"><label>VAT #</label><input type="text" id="vat"></div>
         <div class="field" style="grid-column:1/-1">
-          <label id="l-taxid">Tax ID (CUIT / RUC / RUT / RFC / CNPJ) <span class="req">*</span></label>
-          <input type="text" id="tax_id" required>
+          <label id="l-taxid">Tax ID (CUIT / RUC / RUT / RFC / CNPJ)</label>
+          <input type="text" id="tax_id">
           <div class="note" id="l-taxid-note">Mandatory — missing tax ID may delay account opening.</div>
+        </div>
+        <div style="grid-column:1/-1;display:none;" id="tax-error">
+          <span style="color:#e53e3e;font-size:12px;font-weight:500;">⚠ Please complete at least one tax identification field (EORI, VAT or Tax ID).</span>
         </div>
         <div class="field">
           <label id="l-paymode">Payment mode</label>
@@ -203,7 +206,7 @@
 
   <!-- Shipping -->
   <div class="section">
-    <div class="section-header"><span id="s4-title">Shipping Information</span></div>
+    <div class="section-header" style="display:flex;align-items:center;gap:14px;"><span id="s4-title">Shipping Information</span><button type="button" id="same-as-btn" onclick="fillSameAsGeneral()" style="background:#f97316;color:#fff;border:none;border-radius:6px;padding:5px 14px;font-size:11px;font-weight:600;cursor:pointer;">Same as Bill To</button></div>
     <div class="section-body">
       <div class="grid grid-2">
         <div class="field" style="grid-column:1/-1"><label id="l-shipto">Ship to <span class="req">*</span></label><input type="text" id="ship_to" required></div>
@@ -299,8 +302,10 @@ var T = {
     'fh-title': 'New Account Opening Request',
     'fh-sub': 'Fields marked with * are required.',
     's1-title': 'General Data',
+    's1-billtitle': 'Bill To',
     's2-title': 'Commercial Management',
     's3-title': 'Tax Data',
+    's3-note': '* At least one field required',
     's4-title': 'Shipping Information',
     's5-title': 'Contact Information',
     's6-title': 'Commercial References',
@@ -351,8 +356,10 @@ var T = {
     'fh-title': 'Solicitud de Apertura de Cuenta',
     'fh-sub': 'Los campos marcados con * son obligatorios.',
     's1-title': 'Datos Generales',
+    's1-billtitle': 'Datos de Facturación',
     's2-title': 'Gestión Comercial',
     's3-title': 'Datos Fiscales',
+    's3-note': '* Al menos un campo requerido',
     's4-title': 'Información de Envío',
     's5-title': 'Información de Contacto',
     's6-title': 'Referencias Comerciales',
@@ -400,6 +407,8 @@ var T = {
 
 function setLang(lang) {
   currentLang = lang;
+  var sameBtn = document.getElementById('same-as-btn');
+  if (sameBtn) sameBtn.textContent = lang === 'es' ? 'Idem Datos de Facturación' : 'Same as Bill To';
   var btns = document.querySelectorAll('.lang-toggle button');
   btns[0].classList.toggle('active', lang === 'en');
   btns[1].classList.toggle('active', lang === 'es');
@@ -431,7 +440,7 @@ function submitForm() {
   submitBtn.disabled = true;
   submitBtn.textContent = currentLang === 'es' ? 'Enviando...' : 'Sending...';
   var required = ['company','address','city','state','zip','country','phone','email_orders',
-    'market','brands','activity','tax_id','ship_to','ship_city','ship_country','ship_zip',
+    'market','brands','activity','ship_to','ship_city','ship_country','ship_zip',
     'contact_resp','contact_resp_email','contact_resp_ph'];
   var missing = required.filter(function(id){ return !v(id).trim(); });
   if (missing.length) {
@@ -441,6 +450,18 @@ function submitForm() {
     submitBtn.textContent = currentLang === 'es' ? 'Enviar solicitud →' : 'Submit request →';
     return;
   }
+  if (!v('eori').trim() && !v('vat').trim() && !v('tax_id').trim()) {
+    var taxErr = document.getElementById('tax-error');
+    taxErr.style.display = 'block';
+    taxErr.querySelector('span').textContent = currentLang === 'es' 
+      ? '⚠ Por favor completá al menos un campo de identificación fiscal (EORI, VAT o Tax ID).' 
+      : '⚠ Please complete at least one tax identification field (EORI, VAT or Tax ID).';
+    document.getElementById('eori').focus();
+    submitBtn.disabled = false;
+    submitBtn.textContent = currentLang === 'es' ? 'Enviar solicitud →' : 'Submit request →';
+    return;
+  }
+  document.getElementById('tax-error').style.display = 'none';
   var params = {
     action:'addAccountRequest', callback:'__cb_'+Date.now(), lang: currentLang,
     company:v('company'), address:v('address')+' '+v('addr_number')+(v('floor_apt')?' '+v('floor_apt'):''),
@@ -472,6 +493,16 @@ function submitForm() {
   s.src = GAS_URL+'?'+qs+'&nocache='+Date.now();
   document.head.appendChild(s);
 }
+
+function fillSameAsGeneral() {
+  document.getElementById('ship_to').value = document.getElementById('company').value;
+  document.getElementById('ship_city').value = document.getElementById('city').value;
+  document.getElementById('ship_state').value = document.getElementById('state').value;
+  document.getElementById('ship_country').value = document.getElementById('country').value;
+  document.getElementById('ship_zip').value = document.getElementById('zip').value;
+}
+
+
 </script>
 </body>
 </html>
