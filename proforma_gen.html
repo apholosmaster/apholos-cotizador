@@ -1397,7 +1397,7 @@ function logProforma(num) {
     brand: document.getElementById('f-brand').value,
     shipto: document.getElementById('f-shipto').value.split('\n')[0] || '',
     custid: document.getElementById('f-custid').value,
-    originalDate: state.loadedFrom ? document.getElementById('f-date').value : ''
+    originalDate: document.getElementById('f-date').value
   };
   var qs = Object.keys(params).map(function(k){ return k + '=' + encodeURIComponent(params[k]); }).join('&');
   var cbName = '__log_' + Date.now();
