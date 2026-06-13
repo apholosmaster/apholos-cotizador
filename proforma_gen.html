@@ -1818,25 +1818,20 @@ function renderProformaList(list) {
   var sorted = list.slice().sort(function(a, b) {
     var pa = parsePINumber(a.number), pb = parsePINumber(b.number);
     if (pa.base === pb.base) return pb.ver - pa.ver; // same group: version desc
-    // different group: sort by the date of the base (version 0) or latest in group
-    var aDate = a.date || '', bDate = b.date || '';
-    if (bDate > aDate) return 1;
-    if (bDate < aDate) return -1;
-    return 0;
+    // different group: sort by dateSort (numeric timestamp, never ambiguous)
+    return (b.dateSort || 0) - (a.dateSort || 0);
   });
   // For groups with no original, find best date per group
   var groupDate = {};
   sorted.forEach(function(p) {
     var b = parsePINumber(p.number).base;
-    if (!groupDate[b] || (p.date || '') > groupDate[b]) groupDate[b] = p.date || '';
+    if (!(b in groupDate) || (p.dateSort || 0) > groupDate[b]) groupDate[b] = p.dateSort || 0;
   });
   sorted.sort(function(a, b) {
     var pa = parsePINumber(a.number), pb = parsePINumber(b.number);
     if (pa.base === pb.base) return pb.ver - pa.ver;
-    var da = groupDate[pa.base] || '', db = groupDate[pb.base] || '';
-    if (db > da) return 1;
-    if (db < da) return -1;
-    return 0;
+    var da = groupDate[pa.base] || 0, db = groupDate[pb.base] || 0;
+    return db - da;
   });
   // Mark latest per base
   var latestSeen = {};
